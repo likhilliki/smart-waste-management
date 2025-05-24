@@ -107,16 +107,30 @@ def user_dashboard():
     # Get user stats
     waste_items = WasteItem.query.filter_by(user_id=current_user.id).all()
     total_credits = current_user.get_total_credits()
-    recent_transactions = Transaction.query.filter_by(user_id=current_user.id).order_by(Transaction.timestamp.desc()).limit(5).all()
+    recent_transactions_query = Transaction.query.filter_by(user_id=current_user.id).order_by(Transaction.timestamp.desc()).limit(5).all()
     
+    # Create serializable data for waste types chart
     waste_types = {}
     for item in waste_items:
         waste_types[item.waste_type] = waste_types.get(item.waste_type, 0) + 1
     
+    # Create serializable data for credits chart
+    transaction_data = []
+    for transaction in recent_transactions_query:
+        # Format transaction data for the chart
+        date_str = transaction.timestamp.strftime('%Y-%m-%d') if transaction.timestamp else 'unknown'
+        transaction_data.append({
+            'id': transaction.id,
+            'date': date_str,
+            'action': transaction.action,
+            'waste_type': transaction.waste_item.waste_type if transaction.waste_item else 'unknown'
+        })
+    
     return render_template('user/dashboard.html', 
                           waste_items=waste_items,
                           total_credits=total_credits,
-                          recent_transactions=recent_transactions,
+                          recent_transactions=recent_transactions_query,
+                          transaction_data=transaction_data,
                           waste_types=waste_types)
 
 @app.route('/user/scan', methods=['GET', 'POST'])
@@ -343,7 +357,19 @@ def admin_dashboard():
         waste_types[item.waste_type] = waste_types.get(item.waste_type, 0) + 1
     
     # Recent transactions
-    recent_transactions = Transaction.query.order_by(Transaction.timestamp.desc()).limit(10).all()
+    recent_transactions_query = Transaction.query.order_by(Transaction.timestamp.desc()).limit(10).all()
+    
+    # Create serializable transaction data for charts
+    transaction_data = []
+    for transaction in recent_transactions_query:
+        date_str = transaction.timestamp.strftime('%Y-%m-%d') if transaction.timestamp else 'unknown'
+        transaction_data.append({
+            'id': transaction.id,
+            'date': date_str,
+            'action': transaction.action,
+            'waste_type': transaction.waste_item.waste_type if transaction.waste_item else 'unknown',
+            'user_id': transaction.user_id
+        })
     
     return render_template('admin/dashboard.html',
                           total_users=total_users,
@@ -352,7 +378,8 @@ def admin_dashboard():
                           processed_items=processed_items,
                           processing_rate=processing_rate,
                           waste_types=waste_types,
-                          recent_transactions=recent_transactions)
+                          recent_transactions=recent_transactions_query,
+                          transaction_data=transaction_data)
 
 @app.route('/admin/users')
 @login_required

@@ -95,8 +95,8 @@ function createActivityChart() {
     const activityByDate = {};
     
     activityData.forEach(activity => {
-        const date = new Date(activity.timestamp);
-        const dateStr = date.toLocaleDateString();
+        // Use date from the data property instead of timestamp
+        const dateStr = activity.date;
         
         if (!activityByDate[dateStr]) {
             activityByDate[dateStr] = 0;
@@ -177,14 +177,15 @@ function createCreditsChart() {
     const creditsByDate = {};
     
     creditsData.forEach(credit => {
-        const date = new Date(credit.timestamp);
-        const dateStr = date.toLocaleDateString();
+        // Use date from the data property instead of timestamp
+        const dateStr = credit.date;
         
         if (!creditsByDate[dateStr]) {
             creditsByDate[dateStr] = 0;
         }
         
-        creditsByDate[dateStr] += credit.amount;
+        // No amount property in our transaction data, just count transactions
+        creditsByDate[dateStr] += 1;
     });
     
     // Prepare data for chart
