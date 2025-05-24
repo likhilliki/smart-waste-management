@@ -161,8 +161,11 @@
 <script src="{{ url_for('static', filename='js/qrcode.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Get QR reader element
+        const qrReaderElement = document.getElementById('qr-reader');
+        
         // Initialize QR code scanner
-        initQRScanner(null, function(qrCodeMessage) {
+        initQRScanner(qrReaderElement, function(qrCodeMessage) {
             console.log("QR Code detected:", qrCodeMessage);
             
             // Verify QR code

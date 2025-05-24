@@ -8,14 +8,9 @@ let scanner = null;
  * Initialize QR code scanner
  */
 function initQRScanner(videoElement, scanResultCallback) {
-    if (!videoElement) {
-        console.error('Video element not found');
-        return;
-    }
-    
     // Check if browser supports getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showError('Your browser does not support camera access');
+        showScanError('Your browser does not support camera access', 'scan-result');
         return;
     }
     
@@ -24,7 +19,10 @@ function initQRScanner(videoElement, scanResultCallback) {
         "qr-reader", 
         { 
             fps: 10,
-            qrbox: 250
+            qrbox: 250,
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+            rememberLastUsedCamera: true,
+            aspectRatio: 1
         }
     );
     
