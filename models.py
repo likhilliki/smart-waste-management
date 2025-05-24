@@ -15,6 +15,12 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False)  # 'admin', 'user', 'recycler'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Crypto wallet integration
+    wallet_address = db.Column(db.String(256))  # Ethereum/MetaMask wallet address
+    wallet_type = db.Column(db.String(50))  # 'metamask', 'bitgit', etc.
+    wallet_linked_at = db.Column(db.DateTime)
+    wallet_verified = db.Column(db.Boolean, default=False)
+    
     # Relationships
     waste_items = db.relationship('WasteItem', foreign_keys='WasteItem.user_id', backref='user', lazy=True)
     collected_items = db.relationship('WasteItem', foreign_keys='WasteItem.recycler_id', backref='recycler', lazy=True)
@@ -28,6 +34,15 @@ class User(UserMixin, db.Model):
     
     def get_total_credits(self):
         return sum(credit.amount for credit in self.recycling_credits)
+    
+    def link_wallet(self, wallet_address, wallet_type):
+        self.wallet_address = wallet_address
+        self.wallet_type = wallet_type
+        self.wallet_linked_at = datetime.utcnow()
+        return True
+    
+    def has_wallet(self):
+        return bool(self.wallet_address)
     
     def __repr__(self):
         return f'<User {self.username}>'

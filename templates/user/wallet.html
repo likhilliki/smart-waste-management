@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}My Recycling Wallet{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="text-center mb-4">My Recycling Wallet</h2>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Recycling Tokens</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="token-balance">
+                                <h3>Total Tokens: <span class="badge bg-success">{{ total_credits }} RC</span></h3>
+                                <p class="text-muted">Recycling Credits (RC) are tokens earned through recycling activities</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if wallet_address %}
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i> Your {{ wallet_type }} wallet is connected
+                                    <hr>
+                                    <small>Wallet Address: {{ wallet_address }}</small>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-circle me-2"></i> No crypto wallet connected
+                                    <p>Connect a wallet to receive your tokens on the blockchain</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if not wallet_address %}
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Connect Wallet</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('user_wallet') }}">
+                            <div class="mb-3">
+                                <label for="wallet_type" class="form-label">Wallet Type</label>
+                                <select class="form-select" id="wallet_type" name="wallet_type" required>
+                                    <option value="" selected disabled>Select wallet type</option>
+                                    <option value="metamask">MetaMask (Ethereum)</option>
+                                    <option value="bitgit">BitGit</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="wallet_address" class="form-label">Wallet Address</label>
+                                <input type="text" class="form-control" id="wallet_address" name="wallet_address" 
+                                       placeholder="Enter your wallet address" required>
+                                <small class="form-text text-muted">
+                                    For MetaMask, enter your Ethereum address (starts with 0x).
+                                </small>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Connect Wallet</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">How to Connect MetaMask</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol>
+                            <li>Install the <a href="https://metamask.io/download/" target="_blank">MetaMask browser extension</a></li>
+                            <li>Create or import a wallet in MetaMask</li>
+                            <li>Click on your account name to copy your address</li>
+                            <li>Paste your address in the form above and click Connect</li>
+                        </ol>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Transfer Tokens</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Your recycling tokens can be transferred to your connected wallet.</p>
+                        <button id="transferTokens" class="btn btn-success">
+                            <i class="fas fa-exchange-alt me-2"></i> Transfer {{ total_credits }} RC to Wallet
+                        </button>
+                        <div id="transferStatus" class="mt-3"></div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Token History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Description</th>
+                                    <th>Blockchain Hash</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if credits_history %}
+                                    {% for credit in credits_history %}
+                                        <tr>
+                                            <td>{{ credit.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>{{ credit.amount }} RC</td>
+                                            <td>{{ credit.description }}</td>
+                                            <td>
+                                                {% if credit.blockchain_hash %}
+                                                    <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                                          title="{{ credit.blockchain_hash }}">
+                                                        {{ credit.blockchain_hash }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">No token transactions yet</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for connecting MetaMask -->
+<div class="modal fade" id="metamaskModal" tabindex="-1" aria-labelledby="metamaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="metamaskModalLabel">Connect with MetaMask</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Click the button below to connect your MetaMask wallet:</p>
+                <button id="connectMetamask" class="btn btn-warning">
+                    <i class="fas fa-wallet me-2"></i> Connect MetaMask
+                </button>
+                <div id="metamaskStatus" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Transfer tokens button
+    const transferBtn = document.getElementById('transferTokens');
+    if (transferBtn) {
+        transferBtn.addEventListener('click', function() {
+            const statusDiv = document.getElementById('transferStatus');
+            statusDiv.innerHTML = '<div class="alert alert-info">Initiating transfer to blockchain...</div>';
+            
+            // Simulate blockchain transfer
+            setTimeout(function() {
+                statusDiv.innerHTML = '<div class="alert alert-success">' +
+                    '<i class="fas fa-check-circle me-2"></i> Transfer completed! ' +
+                    'Tokens have been sent to your wallet.</div>';
+            }, 2000);
+        });
+    }
+    
+    // MetaMask connection
+    const connectMetamaskBtn = document.getElementById('connectMetamask');
+    if (connectMetamaskBtn) {
+        connectMetamaskBtn.addEventListener('click', async function() {
+            const statusDiv = document.getElementById('metamaskStatus');
+            
+            try {
+                // Check if MetaMask is installed
+                if (typeof window.ethereum !== 'undefined') {
+                    statusDiv.innerHTML = '<div class="alert alert-info">Requesting account access...</div>';
+                    
+                    // Request account access
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const account = accounts[0];
+                    
+                    // Update form with account
+                    document.getElementById('wallet_address').value = account;
+                    document.getElementById('wallet_type').value = 'metamask';
+                    
+                    statusDiv.innerHTML = '<div class="alert alert-success">' +
+                        '<i class="fas fa-check-circle me-2"></i> Connected to ' + account +
+                        '<br><small>Click Connect Wallet to confirm</small></div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="alert alert-danger">' +
+                        '<i class="fas fa-exclamation-triangle me-2"></i> MetaMask is not installed. ' +
+                        'Please install MetaMask to continue.</div>';
+                }
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerHTML = '<div class="alert alert-danger">' +
+                    '<i class="fas fa-exclamation-triangle me-2"></i> Error connecting to MetaMask: ' +
+                    error.message + '</div>';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

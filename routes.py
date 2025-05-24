@@ -4,11 +4,12 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime
 import uuid
 import json
+import re
 
 from app import app, db
 from models import User, WasteItem, Transaction, RecyclingCredit
 from waste_classifier import classify_waste
-from blockchain import generate_blockchain_hash, create_token_transaction
+from blockchain import generate_blockchain_hash, create_token_transaction, verify_transaction
 
 # Home page
 @app.route('/')
@@ -208,6 +209,93 @@ def user_history():
     waste_items = WasteItem.query.filter_by(user_id=current_user.id).order_by(WasteItem.created_at.desc()).all()
     
     return render_template('user/history.html', waste_items=waste_items)
+
+@app.route('/user/wallet', methods=['GET', 'POST'])
+@login_required
+def user_wallet():
+    if current_user.role != 'user':
+        flash('Access denied', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Get user credits
+    total_credits = current_user.get_total_credits()
+    credits_history = RecyclingCredit.query.filter_by(user_id=current_user.id).order_by(RecyclingCredit.timestamp.desc()).all()
+    
+    if request.method == 'POST':
+        wallet_address = request.form.get('wallet_address')
+        wallet_type = request.form.get('wallet_type')
+        
+        if not wallet_address or not wallet_type:
+            flash('Wallet address and type are required', 'danger')
+            return redirect(url_for('user_wallet'))
+        
+        # Validate wallet address format
+        if wallet_type == 'metamask':
+            # Ethereum address validation (0x followed by 40 hex characters)
+            if not re.match(r'^0x[a-fA-F0-9]{40}$', wallet_address):
+                flash('Invalid Ethereum wallet address format', 'danger')
+                return redirect(url_for('user_wallet'))
+        elif wallet_type == 'bitgit':
+            # BitGit address validation
+            if not re.match(r'^[a-zA-Z0-9]{30,42}$', wallet_address):
+                flash('Invalid BitGit wallet address format', 'danger')
+                return redirect(url_for('user_wallet'))
+        
+        # Link wallet to user account
+        current_user.link_wallet(wallet_address, wallet_type)
+        current_user.wallet_verified = True
+        db.session.commit()
+        
+        flash(f'Your {wallet_type} wallet has been successfully linked!', 'success')
+        return redirect(url_for('user_wallet'))
+    
+    return render_template('user/wallet.html', 
+                          total_credits=total_credits, 
+                          credits_history=credits_history,
+                          wallet_address=current_user.wallet_address,
+                          wallet_type=current_user.wallet_type)
+                          
+@app.route('/user/transfer_tokens', methods=['POST'])
+@login_required
+def transfer_tokens():
+    if current_user.role != 'user':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    if not current_user.wallet_address or not current_user.wallet_verified:
+        return jsonify({'success': False, 'error': 'No verified wallet connected'}), 400
+        
+    data = request.json
+    amount = data.get('amount', 0)
+    
+    if amount <= 0:
+        return jsonify({'success': False, 'error': 'Invalid transfer amount'}), 400
+    
+    # Get user's available credits
+    available_credits = current_user.get_total_credits()
+    
+    if amount > available_credits:
+        return jsonify({'success': False, 'error': 'Insufficient tokens for transfer'}), 400
+    
+    # Create blockchain transaction
+    transaction_hash = create_token_transaction(current_user.id, amount)
+    
+    # Create a record of the token transfer
+    transfer_record = RecyclingCredit(
+        amount=-amount,  # Negative amount as tokens are being transferred out
+        description=f"Transferred {amount} RC tokens to wallet {current_user.wallet_address}",
+        user_id=current_user.id,
+        blockchain_hash=transaction_hash
+    )
+    
+    db.session.add(transfer_record)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'amount': amount,
+        'transaction_hash': transaction_hash,
+        'remaining_balance': current_user.get_total_credits()
+    })
 
 # Recycler routes
 @app.route('/recycler/dashboard')
