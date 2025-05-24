@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block title %}Recycling History - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Recycling History</h2>
+                <p>View your waste recycling activity and status</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- History Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">All Recycled Items</h4>
+        </div>
+        <div class="card-body">
+            {% if waste_items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Waste Type</th>
+                            <th>Status</th>
+                            <th>Recycler</th>
+                            <th>QR Code</th>
+                            <th>Credits</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in waste_items %}
+                        <tr>
+                            <td>{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <span class="text-capitalize">{{ item.waste_type }}</span>
+                            </td>
+                            <td>
+                                {% if item.status == 'created' %}
+                                <span class="badge bg-info">Created</span>
+                                {% elif item.status == 'collected' %}
+                                <span class="badge bg-success">Collected</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ item.status.title() }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.recycler_id %}
+                                <span class="text-muted">ID: {{ item.recycler_id }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#qrModal{{ item.id }}">
+                                    <i class="fas fa-qrcode me-1"></i> View
+                                </button>
+                                
+                                <!-- QR Code Modal -->
+                                <div class="modal fade" id="qrModal{{ item.id }}" tabindex="-1" aria-labelledby="qrModalLabel{{ item.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="qrModalLabel{{ item.id }}">QR Code</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-center">
+                                                <div id="qr-container-{{ item.id }}" class="qr-container mb-3"></div>
+                                                <p class="mb-0">QR Code: {{ item.qr_code }}</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% for credit in item.recycling_credits %}
+                                {{ credit.amount }} RC
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-recycle fa-3x mb-3" style="color: var(--primary-color);"></i>
+                <h5>No recycling history yet</h5>
+                <p>Start by scanning your waste items to generate QR codes.</p>
+                <a href="{{ url_for('user_scan') }}" class="btn btn-primary mt-3">
+                    <i class="fas fa-camera me-2"></i> Scan Waste
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Stats Summary -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Recycling Summary</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Items
+                            <span class="badge bg-primary rounded-pill">{{ waste_items|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Collected Items
+                            <span class="badge bg-success rounded-pill">{{ waste_items|selectattr('status', 'equalto', 'collected')|list|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Pending Collection
+                            <span class="badge bg-info rounded-pill">{{ waste_items|selectattr('status', 'equalto', 'created')|list|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Credits Earned
+                            <span class="badge bg-warning rounded-pill">{{ current_user.get_total_credits() }} RC</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Environmental Impact</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            CO₂ Reduction
+                            <span class="badge bg-success rounded-pill">{{ (waste_items|selectattr('status', 'equalto', 'collected')|list|length * 0.5)|round(2) }} kg</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Water Saved
+                            <span class="badge bg-info rounded-pill">{{ (waste_items|selectattr('status', 'equalto', 'collected')|list|length * 3.5)|round(2) }} liters</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Energy Saved
+                            <span class="badge bg-warning rounded-pill">{{ (waste_items|selectattr('status', 'equalto', 'collected')|list|length * 1.2)|round(2) }} kWh</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Landfill Space Saved
+                            <span class="badge bg-danger rounded-pill">{{ (waste_items|selectattr('status', 'equalto', 'collected')|list|length * 0.01)|round(2) }} m³</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generate QR codes for each waste item in modals
+        {% for item in waste_items %}
+        document.getElementById('qrModal{{ item.id }}').addEventListener('shown.bs.modal', function () {
+            generateQRCode('{{ item.qr_code }}', 'qr-container-{{ item.id }}');
+        });
+        {% endfor %}
+    });
+</script>
+{% endblock %}

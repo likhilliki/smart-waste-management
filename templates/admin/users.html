@@ -1,0 +1,322 @@
+{% extends "layout.html" %}
+
+{% block title %}User Management - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>User Management</h2>
+                <p>Manage and monitor users on the platform</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Search & Filters</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="searchInput" class="form-label">Search Users</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Name, email or ID">
+                        <button class="btn btn-outline-primary" type="button" id="searchButton">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="dateFilter" class="form-label">Join Date</label>
+                    <select class="form-select" id="dateFilter">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="activityFilter" class="form-label">Activity Status</label>
+                    <select class="form-select" id="activityFilter">
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" id="applyFilters">
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h4 class="mb-0">Users</h4>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-2"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Join Date</th>
+                            <th>Waste Items</th>
+                            <th>Credits</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ user.waste_items|length }}</td>
+                            <td>{{ user.get_total_credits() }}</td>
+                            <td>
+                                {% if user.waste_items|length > 0 %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ user.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ user.id }}">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i> View Details</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i> Edit User</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-ban me-2"></i> Suspend User</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="User pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Next</a>
+                    </li>
+                </ul>
+            </nav>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x mb-3" style="color: var(--primary-color);"></i>
+                <h5>No users found</h5>
+                <p>There are no users registered in the system yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- User Statistics -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">User Statistics</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Total Users</h5>
+                                <span class="badge bg-primary rounded-pill">{{ users|length }}</span>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Active Users</h5>
+                                <span class="badge bg-success rounded-pill">
+                                    {% set active_users = 0 %}
+                                    {% for user in users %}
+                                        {% if user.waste_items|length > 0 %}
+                                            {% set active_users = active_users + 1 %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ active_users }}
+                                </span>
+                            </div>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ (active_users / users|length * 100)|round }}%;" 
+                                     aria-valuenow="{{ active_users }}" aria-valuemin="0" aria-valuemax="{{ users|length }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Inactive Users</h5>
+                                <span class="badge bg-secondary rounded-pill">
+                                    {% set inactive_users = users|length - active_users %}
+                                    {{ inactive_users }}
+                                </span>
+                            </div>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div class="progress-bar bg-secondary" role="progressbar" 
+                                     style="width: {{ (inactive_users / users|length * 100)|round }}%;" 
+                                     aria-valuenow="{{ inactive_users }}" aria-valuemin="0" aria-valuemax="{{ users|length }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Average Credits per User</h5>
+                                <span class="badge bg-info rounded-pill">
+                                    {% set total_credits = 0 %}
+                                    {% for user in users %}
+                                        {% set total_credits = total_credits + user.get_total_credits() %}
+                                    {% endfor %}
+                                    {{ (total_credits / users|length)|round(1) if users|length > 0 else 0 }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Top Users</h4>
+                </div>
+                <div class="card-body">
+                    {% if users %}
+                    <div class="list-group">
+                        {% set sorted_users = users|sort(attribute='get_total_credits()', reverse=True) %}
+                        {% for user in sorted_users[:5] %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ user.username }}</h5>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                </div>
+                                <span class="badge bg-success rounded-pill">{{ user.get_total_credits() }} RC</span>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-trash-alt me-1"></i> {{ user.waste_items|length }} items
+                                    <span class="mx-2">|</span>
+                                    <i class="fas fa-calendar-alt me-1"></i> Joined {{ user.created_at.strftime('%Y-%m-%d') }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No user data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const table = document.getElementById('usersTable');
+        
+        if (searchInput && searchButton && table) {
+            const searchTable = function() {
+                const filter = searchInput.value.toUpperCase();
+                const rows = table.getElementsByTagName('tr');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    let found = false;
+                    const cells = rows[i].getElementsByTagName('td');
+                    
+                    for (let j = 0; j < 3; j++) { // Only search in ID, Username, Email columns
+                        const cell = cells[j];
+                        if (cell) {
+                            const textValue = cell.textContent || cell.innerText;
+                            if (textValue.toUpperCase().indexOf(filter) > -1) {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (found) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            };
+            
+            searchButton.addEventListener('click', searchTable);
+            searchInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    searchTable();
+                }
+            });
+            
+            // Apply all filters when button clicked
+            if (applyFiltersBtn) {
+                applyFiltersBtn.addEventListener('click', function() {
+                    // Get filter values
+                    const dateFilter = document.getElementById('dateFilter').value;
+                    const activityFilter = document.getElementById('activityFilter').value;
+                    
+                    // Apply filters
+                    searchTable(); // Apply search first
+                    
+                    // Additional filters would be applied here in a real application
+                    console.log('Applying filters:', dateFilter, activityFilter);
+                    
+                    // Show a notification
+                    showNotification('Filters applied successfully', 'success');
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

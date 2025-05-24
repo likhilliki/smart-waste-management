@@ -1,0 +1,178 @@
+{% extends "layout.html" %}
+
+{% block title %}User Dashboard - BuildVerse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-overview {
+        background-color: var(--background-card);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>User Dashboard</h2>
+                <p>Welcome back, {{ current_user.username }}!</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('user_scan') }}" class="btn btn-primary">
+                    <i class="fas fa-camera me-2"></i> Scan New Waste
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="icon">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <div class="counter" data-target="{{ waste_items|length }}">0</div>
+                <div class="label">Total Items Recycled</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="counter" data-target="{{ total_credits }}">0</div>
+                <div class="label">Recycling Credits (RC)</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="icon">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <div class="counter" data-target="{{ (waste_items|length * 0.5)|round|int }}">0</div>
+                <div class="label">CO₂ Reduced (kg)</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <canvas id="waste-type-chart" data-waste-types="{{ waste_types|tojson }}"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <canvas id="credits-chart" data-credits="{{ recent_transactions|tojson }}"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Recent Activity</h4>
+        </div>
+        <div class="card-body">
+            {% if recent_transactions %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Action</th>
+                            <th>Waste Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in recent_transactions %}
+                        <tr>
+                            <td>{{ transaction.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ transaction.action.title() }}</td>
+                            <td>{{ transaction.waste_item.waste_type.title() }}</td>
+                            <td>
+                                {% if transaction.action == 'created' %}
+                                <span class="badge bg-info">Created</span>
+                                {% elif transaction.action == 'collected' %}
+                                <span class="badge bg-success">Collected</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ transaction.action.title() }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center">No recent activity found. Start by scanning some waste!</p>
+            <div class="text-center">
+                <a href="{{ url_for('user_scan') }}" class="btn btn-primary">
+                    <i class="fas fa-camera me-2"></i> Scan Waste
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer text-end">
+            <a href="{{ url_for('user_history') }}">View All History</a>
+        </div>
+    </div>
+    
+    <!-- Quick Tips -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Recycling Tips</h4>
+        </div>
+        <div class="card-body">
+            <div id="recyclingTips" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="p-3">
+                            <h5><i class="fas fa-lightbulb me-2" style="color: var(--primary-color);"></i>Plastic Recycling</h5>
+                            <p>Rinse plastic containers before recycling and check for recycling symbols at the bottom.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="p-3">
+                            <h5><i class="fas fa-lightbulb me-2" style="color: var(--primary-color);"></i>Paper Recycling</h5>
+                            <p>Remove staples and paper clips from documents before recycling them.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="p-3">
+                            <h5><i class="fas fa-lightbulb me-2" style="color: var(--primary-color);"></i>Glass Recycling</h5>
+                            <p>Different colored glass should be separated for optimal recycling efficiency.</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#recyclingTips" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#recyclingTips" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dashboard charts
+        initDashboardCharts();
+    });
+</script>
+{% endblock %}

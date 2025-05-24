@@ -1,0 +1,467 @@
+{% extends "layout.html" %}
+
+{% block title %}Transaction History - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Transaction History</h2>
+                <p>View all system transactions and blockchain records</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Search & Filters</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="searchInput" class="form-label">Search Transactions</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" placeholder="User ID, Hash, etc.">
+                        <button class="btn btn-outline-primary" type="button" id="searchButton">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label for="actionFilter" class="form-label">Action Type</label>
+                    <select class="form-select" id="actionFilter">
+                        <option value="all">All Actions</option>
+                        <option value="created">Created</option>
+                        <option value="collected">Collected</option>
+                        <option value="processed">Processed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="dateRange" class="form-label">Date Range</label>
+                    <select class="form-select" id="dateRange">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="userTypeFilter" class="form-label">User Type</label>
+                    <select class="form-select" id="userTypeFilter">
+                        <option value="all">All Users</option>
+                        <option value="user">Regular Users</option>
+                        <option value="recycler">Recyclers</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" id="applyFilters">
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transactions Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h4 class="mb-0">Transactions</h4>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-download me-2"></i> Export
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i> CSV</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel me-2"></i> Excel</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> PDF</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="transactionsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Waste Type</th>
+                            <th>Blockchain Hash</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.id }}</td>
+                            <td>{{ transaction.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                <a href="#" data-bs-toggle="tooltip" title="View User Details">
+                                    {{ transaction.user_id }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if transaction.action == 'created' %}
+                                <span class="badge bg-info">Created</span>
+                                {% elif transaction.action == 'collected' %}
+                                <span class="badge bg-success">Collected</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ transaction.action.title() }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ transaction.waste_item.waste_type.title() }}</td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                      data-bs-toggle="tooltip" title="{{ transaction.blockchain_hash }}">
+                                    {{ transaction.blockchain_hash[:10] }}...
+                                </span>
+                            </td>
+                            <td>
+                                {% if transaction.blockchain_hash %}
+                                <span class="badge bg-success">Verified</span>
+                                {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#transactionModal{{ transaction.id }}">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                
+                                <!-- Transaction Details Modal -->
+                                <div class="modal fade" id="transactionModal{{ transaction.id }}" tabindex="-1" aria-labelledby="transactionModalLabel{{ transaction.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="transactionModalLabel{{ transaction.id }}">
+                                                    Transaction Details #{{ transaction.id }}
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <h6>Basic Information</h6>
+                                                        <table class="table table-sm">
+                                                            <tr>
+                                                                <th>Transaction ID:</th>
+                                                                <td>{{ transaction.id }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Timestamp:</th>
+                                                                <td>{{ transaction.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Action:</th>
+                                                                <td>{{ transaction.action.title() }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>User ID:</th>
+                                                                <td>{{ transaction.user_id }}</td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <h6>Waste Information</h6>
+                                                        <table class="table table-sm">
+                                                            <tr>
+                                                                <th>Waste Item ID:</th>
+                                                                <td>{{ transaction.waste_item.id }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Waste Type:</th>
+                                                                <td>{{ transaction.waste_item.waste_type.title() }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>QR Code:</th>
+                                                                <td>{{ transaction.waste_item.qr_code }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Status:</th>
+                                                                <td>{{ transaction.waste_item.status.title() }}</td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-3">
+                                                    <div class="col-12">
+                                                        <h6>Blockchain Information</h6>
+                                                        <div class="card bg-dark">
+                                                            <div class="card-body">
+                                                                <p class="mb-1"><strong>Hash:</strong> {{ transaction.blockchain_hash }}</p>
+                                                                <p class="mb-0"><strong>Verification Status:</strong> 
+                                                                    {% if transaction.blockchain_hash %}
+                                                                    <span class="badge bg-success">Verified on Blockchain</span>
+                                                                    {% else %}
+                                                                    <span class="badge bg-warning">Pending Verification</span>
+                                                                    {% endif %}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <button type="button" class="btn btn-primary">Verify Transaction</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Transaction pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Next</a>
+                    </li>
+                </ul>
+            </nav>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-exchange-alt fa-3x mb-3" style="color: var(--primary-color);"></i>
+                <h5>No transactions found</h5>
+                <p>There are no transactions recorded in the system yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Transaction Analytics -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Transaction Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark p-3 text-center h-100">
+                                <h2>{{ transactions|length }}</h2>
+                                <p class="mb-0">Total Transactions</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark p-3 text-center h-100">
+                                <h2>{{ transactions|selectattr('blockchain_hash', 'defined')|selectattr('blockchain_hash', 'ne', None)|list|length }}</h2>
+                                <p class="mb-0">Blockchain Verified</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h5>Transaction Types</h5>
+                        <div class="list-group">
+                            {% set action_counts = {} %}
+                            {% for transaction in transactions %}
+                                {% if transaction.action in action_counts %}
+                                    {% set _ = action_counts.update({transaction.action: action_counts[transaction.action] + 1}) %}
+                                {% else %}
+                                    {% set _ = action_counts.update({transaction.action: 1}) %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% for action, count in action_counts.items() %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <h6 class="mb-0 text-capitalize">{{ action }}</h6>
+                                    <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                                </div>
+                                <div class="progress mt-2" style="height: 6px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ (count / transactions|length * 100)|round }}%;" 
+                                         aria-valuenow="{{ count }}" aria-valuemin="0" aria-valuemax="{{ transactions|length }}">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Transaction Timeline</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="transaction-timeline-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const table = document.getElementById('transactionsTable');
+        
+        if (searchInput && searchButton && table) {
+            const searchTable = function() {
+                const filter = searchInput.value.toUpperCase();
+                const rows = table.getElementsByTagName('tr');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    let found = false;
+                    const cells = rows[i].getElementsByTagName('td');
+                    
+                    for (let j = 0; j < cells.length; j++) {
+                        const cell = cells[j];
+                        if (cell) {
+                            const textValue = cell.textContent || cell.innerText;
+                            if (textValue.toUpperCase().indexOf(filter) > -1) {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (found) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            };
+            
+            searchButton.addEventListener('click', searchTable);
+            searchInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    searchTable();
+                }
+            });
+            
+            // Apply all filters when button clicked
+            if (applyFiltersBtn) {
+                applyFiltersBtn.addEventListener('click', function() {
+                    // Get filter values
+                    const actionFilter = document.getElementById('actionFilter').value;
+                    const dateRange = document.getElementById('dateRange').value;
+                    const userTypeFilter = document.getElementById('userTypeFilter').value;
+                    
+                    // Apply filters
+                    searchTable(); // Apply search first
+                    
+                    // Additional filters would be applied here in a real application
+                    console.log('Applying filters:', actionFilter, dateRange, userTypeFilter);
+                    
+                    // Show a notification
+                    showNotification('Filters applied successfully', 'success');
+                });
+            }
+        }
+        
+        // Create transaction timeline chart
+        const ctx = document.getElementById('transaction-timeline-chart');
+        if (ctx) {
+            // Sample data - in a real app, this would come from the backend
+            const transactionData = {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                datasets: [
+                    {
+                        label: 'Created',
+                        data: [12, 19, 10, 15, 22, 30, 28],
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Collected',
+                        data: [7, 11, 5, 8, 17, 22, 20],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            };
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: transactionData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#cccccc'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                color: '#cccccc'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

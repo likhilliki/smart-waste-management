@@ -1,0 +1,181 @@
+{% extends "layout.html" %}
+
+{% block title %}Scan QR Code - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Scan QR Code</h2>
+                <p>Scan a user's QR code to verify and collect their waste</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('recycler_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- QR Scanner Section -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">QR Code Scanner</h4>
+                </div>
+                <div class="card-body">
+                    <div id="error-container" class="alert alert-danger d-none mb-3"></div>
+                    
+                    <div id="scanner-container" class="text-center">
+                        <div id="qr-reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
+                        
+                        <div id="loading-indicator" class="text-center py-4 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Verifying QR code...</p>
+                        </div>
+                    </div>
+                    
+                    <div id="scan-result" class="d-none mt-4"></div>
+                    
+                    <div class="text-center mt-4">
+                        <p class="text-muted">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Position the QR code within the scanner frame.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Instructions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="step mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-3">
+                                <span class="badge rounded-pill bg-primary" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">1</span>
+                            </div>
+                            <h5 class="mb-0">Allow Camera Access</h5>
+                        </div>
+                        <p class="ms-5 ps-2 mb-0 text-muted">Grant permission to use your device's camera when prompted.</p>
+                    </div>
+                    
+                    <div class="step mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-3">
+                                <span class="badge rounded-pill bg-primary" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">2</span>
+                            </div>
+                            <h5 class="mb-0">Scan QR Code</h5>
+                        </div>
+                        <p class="ms-5 ps-2 mb-0 text-muted">Point the camera at the user's QR code until it's recognized.</p>
+                    </div>
+                    
+                    <div class="step mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-3">
+                                <span class="badge rounded-pill bg-primary" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">3</span>
+                            </div>
+                            <h5 class="mb-0">Verify Waste</h5>
+                        </div>
+                        <p class="ms-5 ps-2 mb-0 text-muted">Check that the waste type matches what the user has presented.</p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-3">
+                                <span class="badge rounded-pill bg-primary" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">4</span>
+                            </div>
+                            <h5 class="mb-0">Confirm Collection</h5>
+                        </div>
+                        <p class="ms-5 ps-2 mb-0 text-muted">The system will automatically award recycling credits to the user.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recycling Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Recycling Guidelines</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <h5><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Accepted Materials</h5>
+                    <div class="row">
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="fas fa-wine-bottle me-2" style="color: var(--primary-color);"></i> Clean plastic containers</li>
+                                <li class="mb-2"><i class="fas fa-newspaper me-2" style="color: var(--primary-color);"></i> Paper and cardboard</li>
+                                <li class="mb-2"><i class="fas fa-beer me-2" style="color: var(--primary-color);"></i> Metal cans and foil</li>
+                                <li class="mb-2"><i class="fas fa-glass-martini me-2" style="color: var(--primary-color);"></i> Glass bottles and jars</li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="fas fa-laptop me-2" style="color: var(--primary-color);"></i> Electronics</li>
+                                <li class="mb-2"><i class="fas fa-battery-full me-2" style="color: var(--primary-color);"></i> Batteries</li>
+                                <li class="mb-2"><i class="fas fa-tshirt me-2" style="color: var(--primary-color);"></i> Textiles</li>
+                                <li class="mb-2"><i class="fas fa-apple-alt me-2" style="color: var(--primary-color);"></i> Organic waste</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <h5><i class="fas fa-times-circle me-2" style="color: var(--accent-color);"></i>Rejected Materials</h5>
+                    <div class="row">
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="fas fa-prescription-bottle-alt me-2" style="color: var(--accent-color);"></i> Hazardous chemicals</li>
+                                <li class="mb-2"><i class="fas fa-syringe me-2" style="color: var(--accent-color);"></i> Medical waste</li>
+                                <li class="mb-2"><i class="fas fa-radiation-alt me-2" style="color: var(--accent-color);"></i> Radioactive materials</li>
+                                <li class="mb-2"><i class="fas fa-paint-roller me-2" style="color: var(--accent-color);"></i> Wet paint</li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="fas fa-oil-can me-2" style="color: var(--accent-color);"></i> Motor oil</li>
+                                <li class="mb-2"><i class="fas fa-snowplow me-2" style="color: var(--accent-color);"></i> Construction debris</li>
+                                <li class="mb-2"><i class="fas fa-couch me-2" style="color: var(--accent-color);"></i> Large furniture</li>
+                                <li class="mb-2"><i class="fas fa-car-battery me-2" style="color: var(--accent-color);"></i> Car batteries</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/qrcode.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize QR code scanner
+        initQRScanner(null, function(qrCodeMessage) {
+            console.log("QR Code detected:", qrCodeMessage);
+            
+            // Verify QR code
+            verifyQRCode(qrCodeMessage)
+                .then(result => {
+                    console.log("Verification successful:", result);
+                    showScanResult(result, 'scan-result');
+                })
+                .catch(error => {
+                    console.error("Verification failed:", error);
+                    showScanError(error.message, 'scan-result');
+                });
+        });
+    });
+</script>
+{% endblock %}

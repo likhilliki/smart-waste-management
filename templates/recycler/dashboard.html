@@ -1,0 +1,228 @@
+{% extends "layout.html" %}
+
+{% block title %}Recycler Dashboard - BuildVerse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-overview {
+        background-color: var(--background-card);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Recycler Dashboard</h2>
+                <p>Welcome back, {{ current_user.username }}!</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('recycler_scan') }}" class="btn btn-primary">
+                    <i class="fas fa-qrcode me-2"></i> Scan QR Code
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="icon">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="counter" data-target="{{ collected_items|length }}">0</div>
+                <div class="label">Items Collected</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="counter" data-target="{{ collected_items|selectattr('collected_at', 'defined')|list|length }}">0</div>
+                <div class="label">Processed Today</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="icon">
+                    <i class="fas fa-medal"></i>
+                </div>
+                <div class="counter" data-target="{{ (collected_items|length * 7.5)|round|int }}">0</div>
+                <div class="label">Environmental Points</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <canvas id="waste-type-chart" data-waste-types="{{ waste_types|tojson }}"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <canvas id="activity-chart" data-activity="{{ recent_collections|tojson }}"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Collections -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Recent Collections</h4>
+        </div>
+        <div class="card-body">
+            {% if recent_collections %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Waste Type</th>
+                            <th>User ID</th>
+                            <th>Credits Awarded</th>
+                            <th>Blockchain Hash</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recent_collections %}
+                        <tr>
+                            <td>{{ item.collected_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ item.waste_type.title() }}</td>
+                            <td>{{ item.user_id }}</td>
+                            <td>
+                                {% for credit in item.recycling_credits %}
+                                {{ credit.amount }} RC
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                      data-bs-toggle="tooltip" title="{{ item.blockchain_hash }}">
+                                    {{ item.blockchain_hash[:10] }}...
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center">No collections found. Start by scanning QR codes!</p>
+            <div class="text-center">
+                <a href="{{ url_for('recycler_scan') }}" class="btn btn-primary">
+                    <i class="fas fa-qrcode me-2"></i> Scan QR Code
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer text-end">
+            <a href="{{ url_for('recycler_history') }}">View All History</a>
+        </div>
+    </div>
+    
+    <!-- Recycling Impact -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Your Recycling Impact</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <i class="fas fa-tree fa-2x mb-2" style="color: var(--primary-color);"></i>
+                        <h5>{{ (collected_items|length * 0.2)|round(1) }}</h5>
+                        <p class="small text-muted">Trees Saved</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <i class="fas fa-tint fa-2x mb-2" style="color: #36a2eb;"></i>
+                        <h5>{{ (collected_items|length * 50)|round|int }}</h5>
+                        <p class="small text-muted">Liters of Water</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <i class="fas fa-bolt fa-2x mb-2" style="color: #ffce56;"></i>
+                        <h5>{{ (collected_items|length * 3.5)|round(1) }}</h5>
+                        <p class="small text-muted">kWh Saved</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <i class="fas fa-cloud fa-2x mb-2" style="color: #4bc0c0;"></i>
+                        <h5>{{ (collected_items|length * 2.5)|round(1) }}</h5>
+                        <p class="small text-muted">kg CO₂ Reduced</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tips for Recyclers -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Recycler Tips</h4>
+        </div>
+        <div class="card-body">
+            <div id="recyclerTips" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="p-3">
+                            <h5><i class="fas fa-lightbulb me-2" style="color: var(--primary-color);"></i>QR Code Scanning</h5>
+                            <p>Ensure good lighting when scanning QR codes for better recognition.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="p-3">
+                            <h5><i class="fas fa-lightbulb me-2" style="color: var(--primary-color);"></i>Waste Sorting</h5>
+                            <p>Double-check that waste items match their classified categories before processing.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="p-3">
+                            <h5><i class="fas fa-lightbulb me-2" style="color: var(--primary-color);"></i>Collection Efficiency</h5>
+                            <p>Group collections by geographic area to minimize transportation emissions.</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#recyclerTips" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#recyclerTips" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dashboard charts
+        initDashboardCharts();
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

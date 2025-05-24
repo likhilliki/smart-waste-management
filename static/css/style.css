@@ -1,0 +1,362 @@
+/* BuildVerse Waste Management App Styles */
+
+:root {
+    /* Main color palette */
+    --primary-color: #1eb980; /* Eco green */
+    --primary-dark: #17846c;
+    --primary-light: #45d69e;
+    --secondary-color: #045d56; /* Deep teal */
+    --accent-color: #ff6859; /* Recycling red */
+    --background-dark: #121212;
+    --background-card: #1e1e1e;
+    --text-light: #ffffff;
+    --text-secondary: #b0bec5;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-dark);
+    color: var(--text-light);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header styles */
+.navbar-brand {
+    font-weight: 700;
+    color: var(--primary-color) !important;
+}
+
+.navbar-brand img {
+    margin-right: 8px;
+}
+
+.navbar {
+    background-color: rgba(30, 30, 30, 0.8) !important;
+    backdrop-filter: blur(10px);
+}
+
+.nav-link {
+    color: var(--text-light) !important;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-link:hover {
+    color: var(--primary-color) !important;
+}
+
+.nav-link.active {
+    color: var(--primary-light) !important;
+    border-bottom: 2px solid var(--primary-light);
+}
+
+/* Hero section */
+.hero {
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                url('https://pixabay.com/get/g1bb707e702f81c7efa5b8edb36ac58561c7280fb60e8e162fd43c23a0853f4fb28501c30b4ee04a6df75dc63250e29854265bf12772afbb74045153ba32063b2_1280.jpg');
+    background-size: cover;
+    background-position: center;
+    padding: 120px 0;
+    margin-bottom: 30px;
+    border-radius: 0 0 20px 20px;
+}
+
+.hero h1 {
+    font-weight: 700;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    color: var(--text-secondary);
+}
+
+/* Cards */
+.card {
+    background-color: var(--background-card);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-card {
+    padding: 20px;
+    border-radius: 15px;
+    background-color: var(--background-card);
+    text-align: center;
+}
+
+.stat-card .icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+.stat-card .counter {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--text-light);
+}
+
+.stat-card .label {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 8px 20px;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: #fff;
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+/* Forms */
+.form-control, .form-select {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-light);
+    border-radius: 8px;
+    padding: 12px 15px;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(30, 185, 128, 0.25);
+    color: var(--text-light);
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.form-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+/* Camera container */
+.camera-container {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto 20px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.camera-feed {
+    width: 100%;
+    border-radius: 15px;
+}
+
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 20px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+}
+
+.capture-btn {
+    width: 70px;
+    height: 70px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border: 3px solid #fff;
+    border-radius: 50%;
+    margin: 0 auto;
+    transition: all 0.2s;
+}
+
+.capture-btn:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* QR Code */
+.qr-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 15px;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+/* Dashboard */
+.dashboard-header {
+    background-color: var(--background-card);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.dashboard-header h2 {
+    color: var(--text-light);
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.dashboard-header p {
+    color: var(--text-secondary);
+    margin-bottom: 0;
+}
+
+.chart-container {
+    background-color: var(--background-card);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    height: 300px;
+}
+
+/* Tables */
+.table {
+    color: var(--text-light);
+}
+
+.table th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.table td {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Badges */
+.badge-primary {
+    background-color: var(--primary-color);
+}
+
+.badge-secondary {
+    background-color: var(--secondary-color);
+}
+
+.badge-success {
+    background-color: #4caf50;
+}
+
+.badge-danger {
+    background-color: var(--accent-color);
+}
+
+.badge-info {
+    background-color: #2196f3;
+}
+
+.badge-warning {
+    background-color: #ff9800;
+}
+
+/* Footer */
+footer {
+    background-color: var(--background-card);
+    color: var(--text-secondary);
+    padding: 20px 0;
+    margin-top: auto;
+}
+
+footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: var(--primary-light);
+    text-decoration: underline;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Role-specific styling */
+.admin-bg {
+    border-left: 4px solid #9c27b0;
+}
+
+.user-bg {
+    border-left: 4px solid var(--primary-color);
+}
+
+.recycler-bg {
+    border-left: 4px solid #2196f3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .hero {
+        padding: 80px 0;
+    }
+    
+    .hero h1 {
+        font-size: 2.2rem;
+    }
+    
+    .stat-card .counter {
+        font-size: 1.5rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}

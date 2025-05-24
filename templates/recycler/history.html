@@ -1,0 +1,284 @@
+{% extends "layout.html" %}
+
+{% block title %}Collection History - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Collection History</h2>
+                <p>View your waste collection and processing activity</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('recycler_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- History Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h4 class="mb-0">All Collected Items</h4>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search...">
+                        <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if collected_items %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="collectionTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Waste Type</th>
+                            <th>User ID</th>
+                            <th>QR Code</th>
+                            <th>Credits Awarded</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in collected_items %}
+                        <tr>
+                            <td>{{ item.collected_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <span class="text-capitalize">{{ item.waste_type }}</span>
+                            </td>
+                            <td>{{ item.user_id }}</td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                      data-bs-toggle="tooltip" title="{{ item.qr_code }}">
+                                    {{ item.qr_code[:10] }}...
+                                </span>
+                            </td>
+                            <td>
+                                {% for credit in item.recycling_credits %}
+                                {{ credit.amount }} RC
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% if item.status == 'collected' %}
+                                <span class="badge bg-success">Collected</span>
+                                {% elif item.status == 'processed' %}
+                                <span class="badge bg-info">Processed</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ item.status.title() }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Collection history pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Next</a>
+                    </li>
+                </ul>
+            </nav>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-box-open fa-3x mb-3" style="color: var(--primary-color);"></i>
+                <h5>No collection history yet</h5>
+                <p>Start by scanning QR codes to collect and process waste items.</p>
+                <a href="{{ url_for('recycler_scan') }}" class="btn btn-primary mt-3">
+                    <i class="fas fa-qrcode me-2"></i> Scan QR Code
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Collection Statistics -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Collection Summary</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Collections
+                            <span class="badge bg-primary rounded-pill">{{ collected_items|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Collected Today
+                            <span class="badge bg-success rounded-pill">
+                                {% set today_count = 0 %}
+                                {% for item in collected_items %}
+                                    {% if item.collected_at.date() == now().date() %}
+                                        {% set today_count = today_count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ today_count }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Unique Users Served
+                            <span class="badge bg-info rounded-pill">
+                                {{ collected_items|map(attribute='user_id')|unique|list|length }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Credits Awarded
+                            <span class="badge bg-warning rounded-pill">
+                                {% set total_credits = 0 %}
+                                {% for item in collected_items %}
+                                    {% for credit in item.recycling_credits %}
+                                        {% set total_credits = total_credits + credit.amount %}
+                                    {% endfor %}
+                                {% endfor %}
+                                {{ total_credits }} RC
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Waste Type Breakdown</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% set waste_types = {} %}
+                        {% for item in collected_items %}
+                            {% if item.waste_type in waste_types %}
+                                {% set _ = waste_types.update({item.waste_type: waste_types[item.waste_type] + 1}) %}
+                            {% else %}
+                                {% set _ = waste_types.update({item.waste_type: 1}) %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% for type, count in waste_types.items() %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1 text-capitalize">{{ type }}</h5>
+                                <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                            </div>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ (count / collected_items|length * 100)|round }}%;" 
+                                     aria-valuenow="{{ count }}" aria-valuemin="0" aria-valuemax="{{ collected_items|length }}">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Export Options -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Export Data</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="d-grid">
+                        <button class="btn btn-outline-primary" disabled>
+                            <i class="fas fa-file-csv me-2"></i> Export as CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="d-grid">
+                        <button class="btn btn-outline-primary" disabled>
+                            <i class="fas fa-file-excel me-2"></i> Export as Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="d-grid">
+                        <button class="btn btn-outline-primary" disabled>
+                            <i class="fas fa-print me-2"></i> Print Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const table = document.getElementById('collectionTable');
+        
+        if (searchInput && searchButton && table) {
+            const searchTable = function() {
+                const filter = searchInput.value.toUpperCase();
+                const rows = table.getElementsByTagName('tr');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    let found = false;
+                    const cells = rows[i].getElementsByTagName('td');
+                    
+                    for (let j = 0; j < cells.length; j++) {
+                        const cell = cells[j];
+                        if (cell) {
+                            const textValue = cell.textContent || cell.innerText;
+                            if (textValue.toUpperCase().indexOf(filter) > -1) {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (found) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            };
+            
+            searchButton.addEventListener('click', searchTable);
+            searchInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    searchTable();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

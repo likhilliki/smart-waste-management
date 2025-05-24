@@ -1,0 +1,320 @@
+{% extends "layout.html" %}
+
+{% block title %}Admin Dashboard - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Admin Dashboard</h2>
+                <p>System overview and performance metrics</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-file-export me-2"></i> Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i> Export CSV</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> Export PDF</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-print me-2"></i> Print Report</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card admin-bg">
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="counter" data-target="{{ total_users }}">0</div>
+                <div class="label">Total Users</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card admin-bg">
+                <div class="icon">
+                    <i class="fas fa-recycle"></i>
+                </div>
+                <div class="counter" data-target="{{ total_recyclers }}">0</div>
+                <div class="label">Recyclers</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card admin-bg">
+                <div class="icon">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <div class="counter" data-target="{{ total_waste_items }}">0</div>
+                <div class="label">Waste Items</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card admin-bg">
+                <div class="icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="counter" data-target="{{ processed_items }}">0</div>
+                <div class="label">Processed Items</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Processing Rate Gauge -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Processing Rate</h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="chart-container" style="position: relative; height: 250px;">
+                        <canvas id="processing-rate-chart" data-rate="{{ processing_rate }}"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        <h3>{{ processing_rate|round(1) }}%</h3>
+                        <p class="text-muted">of waste items processed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Waste Type Distribution</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="waste-type-chart" data-waste-types="{{ waste_types|tojson }}"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Activity Timeline and Recent Transactions -->
+    <div class="row mb-4">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Recent Transactions</h4>
+                </div>
+                <div class="card-body">
+                    {% if recent_transactions %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Waste Type</th>
+                                    <th>Blockchain Hash</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                <tr>
+                                    <td>{{ transaction.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>{{ transaction.user_id }}</td>
+                                    <td>
+                                        {% if transaction.action == 'created' %}
+                                        <span class="badge bg-info">Created</span>
+                                        {% elif transaction.action == 'collected' %}
+                                        <span class="badge bg-success">Collected</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ transaction.action.title() }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.waste_item.waste_type.title() }}</td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                              data-bs-toggle="tooltip" title="{{ transaction.blockchain_hash }}">
+                                            {{ transaction.blockchain_hash[:10] }}...
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No recent transactions found.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-end">
+                    <a href="{{ url_for('admin_transactions') }}">View All Transactions</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Health and Analytics -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">System Health</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Database Status
+                            <span class="badge bg-success">Healthy</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Blockchain Connection
+                            <span class="badge bg-success">Connected</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            AI Model Status
+                            <span class="badge bg-success">Operational</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            QR Code Generator
+                            <span class="badge bg-success">Functional</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Environmental Impact</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-tree fa-2x mb-2" style="color: var(--primary-color);"></i>
+                                <h5>{{ (processed_items * 0.2)|round(1) }}</h5>
+                                <p class="small text-muted">Trees Saved</p>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-tint fa-2x mb-2" style="color: #36a2eb;"></i>
+                                <h5>{{ (processed_items * 50)|round|int }}</h5>
+                                <p class="small text-muted">Liters of Water</p>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-bolt fa-2x mb-2" style="color: #ffce56;"></i>
+                                <h5>{{ (processed_items * 3.5)|round(1) }}</h5>
+                                <p class="small text-muted">kWh Saved</p>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-cloud fa-2x mb-2" style="color: #4bc0c0;"></i>
+                                <h5>{{ (processed_items * 2.5)|round(1) }}</h5>
+                                <p class="small text-muted">kg CO₂ Reduced</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Quick Links</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('admin_users') }}" class="text-decoration-none">
+                                <div class="card text-center p-3 h-100">
+                                    <i class="fas fa-users fa-2x mb-2" style="color: var(--primary-color);"></i>
+                                    <h5>Manage Users</h5>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('admin_recyclers') }}" class="text-decoration-none">
+                                <div class="card text-center p-3 h-100">
+                                    <i class="fas fa-recycle fa-2x mb-2" style="color: var(--primary-color);"></i>
+                                    <h5>Manage Recyclers</h5>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('admin_transactions') }}" class="text-decoration-none">
+                                <div class="card text-center p-3 h-100">
+                                    <i class="fas fa-exchange-alt fa-2x mb-2" style="color: var(--primary-color);"></i>
+                                    <h5>View Transactions</h5>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="#" class="text-decoration-none">
+                                <div class="card text-center p-3 h-100">
+                                    <i class="fas fa-cog fa-2x mb-2" style="color: var(--primary-color);"></i>
+                                    <h5>System Settings</h5>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dashboard charts
+        initDashboardCharts();
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Gauge chart polyfill for Chart.js
+        Chart.defaults.gauge = Chart.defaults.doughnut;
+        Chart.controllers.gauge = Chart.controllers.doughnut.extend({
+            draw: function() {
+                Chart.controllers.doughnut.prototype.draw.call(this);
+                
+                if (this.chart.options.valueLabel) {
+                    var ctx = this.chart.ctx;
+                    var dataset = this.chart.data.datasets[0];
+                    var model = this.chart.getDatasetMeta(0).data[0]._model;
+                    
+                    ctx.save();
+                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = 'center';
+                    ctx.font = (this.chart.options.valueLabel.fontSize || 16) + 'px ' + 
+                               (this.chart.options.valueLabel.fontFamily || 'Arial');
+                    ctx.fillStyle = this.chart.options.valueLabel.color || '#000';
+                    
+                    var text = this.chart.options.valueLabel.formatter ? 
+                               this.chart.options.valueLabel.formatter(dataset.value) : 
+                               dataset.value;
+                    
+                    ctx.fillText(text, model.x, model.y);
+                    ctx.restore();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

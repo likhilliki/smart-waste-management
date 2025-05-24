@@ -1,0 +1,255 @@
+{% extends "layout.html" %}
+
+{% block title %}BuildVerse - Smart Waste Management{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container text-center">
+        <h1>Smart Waste Management</h1>
+        <p class="lead">AI-powered waste classification, blockchain tracking, and recycling rewards</p>
+        {% if not current_user.is_authenticated %}
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login</a>
+            <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">Register</a>
+        </div>
+        {% else %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="container mb-5">
+    <h2 class="text-center mb-4">How It Works</h2>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-camera fa-3x mb-3" style="color: var(--primary-color);"></i>
+                    <h3 class="card-title">Scan Waste</h3>
+                    <p class="card-text">Use AI to identify and classify your waste into different categories like plastic, metal, or paper.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-qrcode fa-3x mb-3" style="color: var(--primary-color);"></i>
+                    <h3 class="card-title">Generate QR</h3>
+                    <p class="card-text">Create a unique QR code for your waste item, which is recorded on the blockchain for transparency.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-coins fa-3x mb-3" style="color: var(--primary-color);"></i>
+                    <h3 class="card-title">Earn Rewards</h3>
+                    <p class="card-text">Get Recycling Credits (RC) when recyclers verify and process your waste, creating a circular economy.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Key Benefits -->
+<section class="container mb-5">
+    <div class="row align-items-center">
+        <div class="col-lg-6 mb-4">
+            <img src="https://pixabay.com/get/g2c0854facb55ad27cf9e25d322893a6920445933fb3927e22ecc7980027becaa4a4dbdf62cc13a36f7ad60b51ef2298518e1c86ea1abeb07ea7d0e524423ec40_1280.jpg" alt="Waste Management" class="img-fluid rounded-3 shadow-lg">
+        </div>
+        <div class="col-lg-6">
+            <h2 class="mb-4">Key Benefits</h2>
+            <div class="d-flex mb-3">
+                <div class="me-3">
+                    <i class="fas fa-leaf fa-2x" style="color: var(--primary-color);"></i>
+                </div>
+                <div>
+                    <h4>Environmental Impact</h4>
+                    <p>Reduce landfill waste and promote proper recycling with AI-powered waste classification.</p>
+                </div>
+            </div>
+            <div class="d-flex mb-3">
+                <div class="me-3">
+                    <i class="fas fa-shield-alt fa-2x" style="color: var(--primary-color);"></i>
+                </div>
+                <div>
+                    <h4>Transparency</h4>
+                    <p>Track your waste journey from disposal to recycling with blockchain-backed verification.</p>
+                </div>
+            </div>
+            <div class="d-flex mb-3">
+                <div class="me-3">
+                    <i class="fas fa-trophy fa-2x" style="color: var(--primary-color);"></i>
+                </div>
+                <div>
+                    <h4>Incentivization</h4>
+                    <p>Earn Recycling Credits (RC) for your contribution to sustainable waste management.</p>
+                </div>
+            </div>
+            <div class="d-flex mb-3">
+                <div class="me-3">
+                    <i class="fas fa-users fa-2x" style="color: var(--primary-color);"></i>
+                </div>
+                <div>
+                    <h4>Community Engagement</h4>
+                    <p>Join a network of users and recyclers committed to environmental sustainability.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- User Roles -->
+<section class="container mb-5">
+    <h2 class="text-center mb-4">Platform Roles</h2>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 user-bg">
+                <div class="card-body">
+                    <h3 class="card-title"><i class="fas fa-user me-2"></i>Users</h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Scan and classify waste items</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Generate QR codes for tracking</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Earn Recycling Credits</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Track recycling history</li>
+                        <li><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Monitor environmental impact</li>
+                    </ul>
+                    {% if not current_user.is_authenticated %}
+                    <div class="d-grid mt-3">
+                        <a href="{{ url_for('register') }}" class="btn btn-primary">Register as User</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 recycler-bg">
+                <div class="card-body">
+                    <h3 class="card-title"><i class="fas fa-recycle me-2"></i>Recyclers</h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Scan user-generated QR codes</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Verify waste collection</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Process recyclable materials</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Track collection metrics</li>
+                        <li><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Contribute to waste reduction</li>
+                    </ul>
+                    {% if not current_user.is_authenticated %}
+                    <div class="d-grid mt-3">
+                        <a href="{{ url_for('register') }}" class="btn btn-primary">Register as Recycler</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 admin-bg">
+                <div class="card-body">
+                    <h3 class="card-title"><i class="fas fa-user-shield me-2"></i>Admins</h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Monitor system performance</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Track user and recycler activity</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>View transaction history</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Generate reports and analytics</li>
+                        <li><i class="fas fa-check-circle me-2" style="color: var(--primary-color);"></i>Manage platform operations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="container mb-5">
+    <h2 class="text-center mb-5">The Process</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="timeline">
+                <div class="row g-0">
+                    <div class="col-md-6">
+                        <div class="card mb-4 ms-md-4">
+                            <div class="card-body">
+                                <h4 class="card-title"><i class="fas fa-camera me-2" style="color: var(--primary-color);"></i>1. Waste Detection</h4>
+                                <p class="card-text">Capture waste image via mobile app. AI model classifies it into categories (plastic, metal, paper, etc.).</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6"></div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-md-6"></div>
+                    <div class="col-md-6">
+                        <div class="card mb-4 me-md-4">
+                            <div class="card-body">
+                                <h4 class="card-title"><i class="fas fa-qrcode me-2" style="color: var(--primary-color);"></i>2. QR Code Generation</h4>
+                                <p class="card-text">A unique QR is generated for the waste item, containing metadata (type, user ID, timestamp).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-md-6">
+                        <div class="card mb-4 ms-md-4">
+                            <div class="card-body">
+                                <h4 class="card-title"><i class="fas fa-tag me-2" style="color: var(--primary-color);"></i>3. Tagging & Collection</h4>
+                                <p class="card-text">The QR is displayed for tagging the waste. Waste is collected by authorized recyclers.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6"></div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-md-6"></div>
+                    <div class="col-md-6">
+                        <div class="card mb-4 me-md-4">
+                            <div class="card-body">
+                                <h4 class="card-title"><i class="fas fa-link me-2" style="color: var(--primary-color);"></i>4. Blockchain Logging</h4>
+                                <p class="card-text">Each QR scan is logged on the blockchain as a verifiable transaction (proof of proper handling).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-md-6">
+                        <div class="card mb-4 ms-md-4">
+                            <div class="card-body">
+                                <h4 class="card-title"><i class="fas fa-coins me-2" style="color: var(--primary-color);"></i>5. Reward System</h4>
+                                <p class="card-text">Users receive Recycling Credits (RCs) as incentives for correct segregation and tagging.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6"></div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-md-6"></div>
+                    <div class="col-md-6">
+                        <div class="card mb-4 me-md-4">
+                            <div class="card-body">
+                                <h4 class="card-title"><i class="fas fa-chart-line me-2" style="color: var(--primary-color);"></i>6. Admin Monitoring</h4>
+                                <p class="card-text">Realtime waste data is visualized on a dashboard for insights and auditing.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="container text-center mb-5">
+    <div class="card p-5">
+        <h2 class="mb-4">Join the Sustainable Waste Revolution</h2>
+        <p class="lead mb-4">Be part of the solution to tackle urban waste challenges with smart technology and blockchain.</p>
+        {% if not current_user.is_authenticated %}
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login</a>
+            <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">Register</a>
+        </div>
+        {% else %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

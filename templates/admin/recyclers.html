@@ -1,0 +1,354 @@
+{% extends "layout.html" %}
+
+{% block title %}Recycler Management - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Recycler Management</h2>
+                <p>Manage and monitor recyclers on the platform</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recycler Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Search & Filters</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="searchInput" class="form-label">Search Recyclers</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Name, email or ID">
+                        <button class="btn btn-outline-primary" type="button" id="searchButton">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="locationFilter" class="form-label">Location</label>
+                    <select class="form-select" id="locationFilter">
+                        <option value="all">All Locations</option>
+                        <option value="north">North Zone</option>
+                        <option value="south">South Zone</option>
+                        <option value="east">East Zone</option>
+                        <option value="west">West Zone</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="activityFilter" class="form-label">Activity Status</label>
+                    <select class="form-select" id="activityFilter">
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" id="applyFilters">
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recyclers Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h4 class="mb-0">Recyclers</h4>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-2"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if recyclers %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="recyclersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Join Date</th>
+                            <th>Collections</th>
+                            <th>Performance</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for recycler in recyclers %}
+                        {% set collections = [] %}
+                        {% for item in waste_items if item.recycler_id == recycler.id %}
+                            {% set collections = collections + [item] %}
+                        {% endfor %}
+                        <tr>
+                            <td>{{ recycler.id }}</td>
+                            <td>{{ recycler.username }}</td>
+                            <td>{{ recycler.email }}</td>
+                            <td>{{ recycler.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ collections|length }}</td>
+                            <td>
+                                <div class="progress" style="height: 8px;" data-bs-toggle="tooltip" 
+                                     title="{{ (collections|length / 20 * 100)|round }}% of monthly target">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ (collections|length / 20 * 100)|round }}%;" 
+                                         aria-valuenow="{{ collections|length }}" aria-valuemin="0" aria-valuemax="20">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if collections|length > 0 %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ recycler.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ recycler.id }}">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i> View Details</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i> Edit Recycler</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-ban me-2"></i> Suspend Recycler</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Recycler pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Next</a>
+                    </li>
+                </ul>
+            </nav>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-recycle fa-3x mb-3" style="color: var(--primary-color);"></i>
+                <h5>No recyclers found</h5>
+                <p>There are no recyclers registered in the system yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Recycler Statistics -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Recycler Statistics</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Total Recyclers</h5>
+                                <span class="badge bg-primary rounded-pill">{{ recyclers|length }}</span>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Active Recyclers</h5>
+                                <span class="badge bg-success rounded-pill">
+                                    {% set active_recyclers = 0 %}
+                                    {% for recycler in recyclers %}
+                                        {% set has_collections = false %}
+                                        {% for item in waste_items if item.recycler_id == recycler.id %}
+                                            {% set has_collections = true %}
+                                        {% endfor %}
+                                        {% if has_collections %}
+                                            {% set active_recyclers = active_recyclers + 1 %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ active_recyclers }}
+                                </span>
+                            </div>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ (active_recyclers / recyclers|length * 100)|round if recyclers|length > 0 else 0 }}%;" 
+                                     aria-valuenow="{{ active_recyclers }}" aria-valuemin="0" aria-valuemax="{{ recyclers|length }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Inactive Recyclers</h5>
+                                <span class="badge bg-secondary rounded-pill">
+                                    {% set inactive_recyclers = recyclers|length - active_recyclers %}
+                                    {{ inactive_recyclers }}
+                                </span>
+                            </div>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div class="progress-bar bg-secondary" role="progressbar" 
+                                     style="width: {{ (inactive_recyclers / recyclers|length * 100)|round if recyclers|length > 0 else 0 }}%;" 
+                                     aria-valuenow="{{ inactive_recyclers }}" aria-valuemin="0" aria-valuemax="{{ recyclers|length }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h5 class="mb-1">Average Collections per Recycler</h5>
+                                <span class="badge bg-info rounded-pill">
+                                    {% set total_collections = 0 %}
+                                    {% for recycler in recyclers %}
+                                        {% for item in waste_items if item.recycler_id == recycler.id %}
+                                            {% set total_collections = total_collections + 1 %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {{ (total_collections / recyclers|length)|round(1) if recyclers|length > 0 else 0 }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Top Recyclers</h4>
+                </div>
+                <div class="card-body">
+                    {% if recyclers %}
+                    <div class="list-group">
+                        {% set recycler_collections = [] %}
+                        {% for recycler in recyclers %}
+                            {% set collection_count = 0 %}
+                            {% for item in waste_items if item.recycler_id == recycler.id %}
+                                {% set collection_count = collection_count + 1 %}
+                            {% endfor %}
+                            {% set recycler_collections = recycler_collections + [{'recycler': recycler, 'count': collection_count}] %}
+                        {% endfor %}
+                        
+                        {% set sorted_recyclers = recycler_collections|sort(attribute='count', reverse=True) %}
+                        
+                        {% for entry in sorted_recyclers[:5] %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ entry.recycler.username }}</h5>
+                                    <small class="text-muted">{{ entry.recycler.email }}</small>
+                                </div>
+                                <span class="badge bg-success rounded-pill">{{ entry.count }} collections</span>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i> Joined {{ entry.recycler.created_at.strftime('%Y-%m-%d') }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No recycler data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const table = document.getElementById('recyclersTable');
+        
+        if (searchInput && searchButton && table) {
+            const searchTable = function() {
+                const filter = searchInput.value.toUpperCase();
+                const rows = table.getElementsByTagName('tr');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    let found = false;
+                    const cells = rows[i].getElementsByTagName('td');
+                    
+                    for (let j = 0; j < 3; j++) { // Only search in ID, Username, Email columns
+                        const cell = cells[j];
+                        if (cell) {
+                            const textValue = cell.textContent || cell.innerText;
+                            if (textValue.toUpperCase().indexOf(filter) > -1) {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (found) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            };
+            
+            searchButton.addEventListener('click', searchTable);
+            searchInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    searchTable();
+                }
+            });
+            
+            // Apply all filters when button clicked
+            if (applyFiltersBtn) {
+                applyFiltersBtn.addEventListener('click', function() {
+                    // Get filter values
+                    const locationFilter = document.getElementById('locationFilter').value;
+                    const activityFilter = document.getElementById('activityFilter').value;
+                    
+                    // Apply filters
+                    searchTable(); // Apply search first
+                    
+                    // Additional filters would be applied here in a real application
+                    console.log('Applying filters:', locationFilter, activityFilter);
+                    
+                    // Show a notification
+                    showNotification('Filters applied successfully', 'success');
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

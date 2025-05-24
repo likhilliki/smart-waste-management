@@ -1,0 +1,315 @@
+{% extends "layout.html" %}
+
+{% block title %}Scan Waste - BuildVerse{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>Scan Waste</h2>
+                <p>Take a photo of your waste to classify and generate a QR code</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scanning Process Steps -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between flex-wrap mb-4">
+                        <div class="step active text-center p-2" id="step-camera">
+                            <div class="step-icon mb-2">
+                                <i class="fas fa-camera fa-2x" style="color: var(--primary-color);"></i>
+                            </div>
+                            <div class="step-text">
+                                <h5>1. Capture</h5>
+                                <small>Take a photo</small>
+                            </div>
+                        </div>
+                        <div class="step text-center p-2" id="step-classify">
+                            <div class="step-icon mb-2">
+                                <i class="fas fa-microscope fa-2x"></i>
+                            </div>
+                            <div class="step-text">
+                                <h5>2. Classify</h5>
+                                <small>AI identifies waste</small>
+                            </div>
+                        </div>
+                        <div class="step text-center p-2" id="step-qr">
+                            <div class="step-icon mb-2">
+                                <i class="fas fa-qrcode fa-2x"></i>
+                            </div>
+                            <div class="step-text">
+                                <h5>3. Generate QR</h5>
+                                <small>Create unique code</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Camera View -->
+    <div class="row mb-4" id="camera-section">
+        <div class="col-md-8 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Waste Scanner</h4>
+                </div>
+                <div class="card-body">
+                    <div id="error-container" class="alert alert-danger d-none mb-3"></div>
+                    
+                    <div id="camera-container" class="camera-container mb-3 d-none">
+                        <video id="camera-feed" class="camera-feed" autoplay playsinline></video>
+                        <div class="camera-overlay">
+                            <button id="capture-btn" class="capture-btn" type="button">
+                                <span class="visually-hidden">Capture</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <canvas id="canvas" class="d-none"></canvas>
+                    
+                    <div class="text-center mb-3">
+                        <img id="captured-image" class="img-fluid rounded d-none" alt="Captured waste">
+                    </div>
+                    
+                    <div id="start-camera-container" class="text-center py-4">
+                        <button id="start-camera" class="btn btn-lg btn-primary">
+                            <i class="fas fa-camera me-2"></i> Start Camera
+                        </button>
+                    </div>
+                    
+                    <div id="loading-indicator" class="text-center py-4 d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Processing your waste...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">Results</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Classification Results -->
+                    <div id="classification-results" class="d-none mb-4">
+                        <h5 class="mb-3">Waste Classification</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Waste Type</label>
+                            <input type="text" id="waste-type" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confidence</label>
+                            <div class="progress">
+                                <div id="confidence-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <small id="confidence-text" class="form-text">0%</small>
+                        </div>
+                        <div class="d-grid">
+                            <button id="generate-qr-btn" class="btn btn-primary">
+                                <i class="fas fa-qrcode me-2"></i> Generate QR Code
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- QR Code Result -->
+                    <div id="qr-result" class="d-none text-center">
+                        <h5 class="mb-3">Your QR Code</h5>
+                        <div id="qr-container" class="qr-container mb-3"></div>
+                        <p class="mb-3">Present this QR code to a recycler to earn Recycling Credits!</p>
+                        <div class="d-grid gap-2">
+                            <button id="scan-again-btn" class="btn btn-outline-primary">
+                                <i class="fas fa-redo me-2"></i> Scan Another
+                            </button>
+                            <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-home me-2"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Initial Instructions -->
+                    <div id="instructions" class="text-center py-4">
+                        <i class="fas fa-arrow-left fa-3x mb-3" style="color: var(--primary-color);"></i>
+                        <h5>Instructions</h5>
+                        <p>Start the camera and take a clear photo of your waste item. Our AI will classify it and generate a QR code.</p>
+                        <p class="mb-0"><small>Make sure the waste item is clearly visible and well-lit.</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Waste Categories Reference -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Waste Categories</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-wine-bottle fa-2x mb-2" style="color: var(--primary-color);"></i>
+                                <h5>Plastic</h5>
+                                <p class="small text-muted">Bottles, containers, packaging</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-beer fa-2x mb-2" style="color: #36a2eb;"></i>
+                                <h5>Metal</h5>
+                                <p class="small text-muted">Cans, foil, utensils</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-newspaper fa-2x mb-2" style="color: #ffce56;"></i>
+                                <h5>Paper</h5>
+                                <p class="small text-muted">Cardboard, newspapers, boxes</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-glass-martini fa-2x mb-2" style="color: #4bc0c0;"></i>
+                                <h5>Glass</h5>
+                                <p class="small text-muted">Bottles, jars, containers</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-laptop fa-2x mb-2" style="color: #9966ff;"></i>
+                                <h5>Electronic</h5>
+                                <p class="small text-muted">Devices, cables, batteries</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-apple-alt fa-2x mb-2" style="color: #66ff99;"></i>
+                                <h5>Organic</h5>
+                                <p class="small text-muted">Food waste, garden waste</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-prescription-bottle fa-2x mb-2" style="color: #ff6384;"></i>
+                                <h5>Hazardous</h5>
+                                <p class="small text-muted">Chemicals, medical waste</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-question-circle fa-2x mb-2" style="color: #c9cbcf;"></i>
+                                <h5>Other</h5>
+                                <p class="small text-muted">Mixed or unclassified waste</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startCameraBtn = document.getElementById('start-camera');
+        const captureBtn = document.getElementById('capture-btn');
+        const scanAgainBtn = document.getElementById('scan-again-btn');
+        const generateQRBtn = document.getElementById('generate-qr-btn');
+        const videoElement = document.getElementById('camera-feed');
+        const canvasElement = document.getElementById('canvas');
+        const startCameraContainer = document.getElementById('start-camera-container');
+        const classificationResults = document.getElementById('classification-results');
+        const qrResult = document.getElementById('qr-result');
+        const instructions = document.getElementById('instructions');
+        
+        // Step indicators
+        const stepCamera = document.getElementById('step-camera');
+        const stepClassify = document.getElementById('step-classify');
+        const stepQR = document.getElementById('step-qr');
+        
+        // Start camera when button is clicked
+        startCameraBtn.addEventListener('click', function() {
+            startCameraContainer.classList.add('d-none');
+            instructions.classList.add('d-none');
+            initCamera(videoElement);
+        });
+        
+        // Capture image when button is clicked
+        captureBtn.addEventListener('click', function() {
+            const imageData = captureImage(videoElement, canvasElement);
+            
+            // Update steps
+            stepCamera.classList.remove('active');
+            stepClassify.classList.add('active');
+            
+            // Process the captured image
+            classifyWaste(imageData)
+                .then(result => {
+                    // Display classification results
+                    document.getElementById('waste-type').value = result.waste_type.toUpperCase();
+                    
+                    const confidencePercentage = Math.round(result.confidence * 100);
+                    document.getElementById('confidence-bar').style.width = `${confidencePercentage}%`;
+                    document.getElementById('confidence-text').textContent = `${confidencePercentage}% confidence`;
+                    
+                    // Show results
+                    classificationResults.classList.remove('d-none');
+                })
+                .catch(error => {
+                    showError('Error classifying waste: ' + error.message);
+                });
+        });
+        
+        // Generate QR code
+        generateQRBtn.addEventListener('click', function() {
+            const wasteType = document.getElementById('waste-type').value;
+            
+            // Update steps
+            stepClassify.classList.remove('active');
+            stepQR.classList.add('active');
+            
+            // Generate QR code
+            generateWasteQR(wasteType.toLowerCase())
+                .then(result => {
+                    // Show QR code result
+                    classificationResults.classList.add('d-none');
+                    qrResult.classList.remove('d-none');
+                })
+                .catch(error => {
+                    showError('Error generating QR code: ' + error.message);
+                });
+        });
+        
+        // Scan again button
+        scanAgainBtn.addEventListener('click', function() {
+            // Reset UI
+            qrResult.classList.add('d-none');
+            startCameraContainer.classList.remove('d-none');
+            document.getElementById('captured-image').classList.add('d-none');
+            
+            // Reset steps
+            stepQR.classList.remove('active');
+            stepCamera.classList.add('active');
+        });
+    });
+</script>
+{% endblock %}
