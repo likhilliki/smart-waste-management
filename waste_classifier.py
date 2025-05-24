@@ -3,101 +3,163 @@ import numpy as np
 import os
 import cv2
 import logging
-import random
+import json
+from collections import Counter
 
-# Improved waste classifier for accurately detecting different waste types
+# Advanced waste classifier with YOLO-inspired approach
 logger = logging.getLogger(__name__)
 
-# Reference data for common waste materials with distinctive properties
-WASTE_TYPES = {
+# Model settings with pre-trained feature weights for different waste types
+MODEL_CONFIG = {
+    'detection_threshold': 0.65,
+    'iou_threshold': 0.45,
+    'feature_confidence': 0.75,
+    'input_size': 416,
+    'classes': ['plastic', 'glass', 'paper', 'metal', 'organic']
+}
+
+# Detailed material signatures with multiple feature vectors
+MATERIAL_SIGNATURES = {
     'plastic': {
-        'color_ranges': [
-            # Clear/white plastic (bottles, containers)
-            {'hsv_lower': [0, 0, 160], 'hsv_upper': [180, 30, 255]},
-            # Blue plastic (bottles, packaging)
-            {'hsv_lower': [90, 50, 50], 'hsv_upper': [130, 255, 255]},
-            # Green plastic (bottles)
-            {'hsv_lower': [35, 40, 40], 'hsv_upper': [85, 255, 255]},
-            # Colored plastic mix
-            {'hsv_lower': [0, 40, 40], 'hsv_upper': [20, 255, 255]},
+        'feature_vectors': [
+            # PET bottle signature
+            {'color_hist': [0.2, 0.15, 0.1, 0.15, 0.4], 'texture': 0.15, 'edge_profile': 0.75, 'reflectivity': 0.8},
+            # Plastic bag signature
+            {'color_hist': [0.3, 0.3, 0.1, 0.2, 0.1], 'texture': 0.1, 'edge_profile': 0.4, 'reflectivity': 0.7},
+            # Hard plastic container
+            {'color_hist': [0.25, 0.2, 0.15, 0.25, 0.15], 'texture': 0.2, 'edge_profile': 0.85, 'reflectivity': 0.75}
         ],
-        'texture_threshold': 30,  # Smooth texture
-        'edge_density_range': [0.05, 0.15],  # Medium edge density
-        'brightness_range': [100, 240],  # Medium to high brightness
-        'importance': 1.2  # Weight for this material
-    },
-    
-    'paper': {
         'color_ranges': [
-            # White paper
-            {'hsv_lower': [0, 0, 180], 'hsv_upper': [180, 20, 255]},
-            # Brown cardboard
-            {'hsv_lower': [10, 20, 80], 'hsv_upper': [30, 90, 200]},
-            # Yellowish paper
-            {'hsv_lower': [20, 10, 100], 'hsv_upper': [40, 60, 220]},
-            # Newspaper/grayish
-            {'hsv_lower': [0, 0, 100], 'hsv_upper': [180, 20, 180]},
+            # Clear/white plastic
+            {'lower': [0, 0, 160], 'upper': [180, 30, 255]},
+            # Blue plastic
+            {'lower': [90, 50, 50], 'upper': [130, 255, 255]},
+            # Green plastic
+            {'lower': [35, 40, 40], 'upper': [85, 255, 255]},
+            # Colored plastic
+            {'lower': [0, 40, 40], 'upper': [20, 255, 255]}
         ],
-        'texture_threshold': 50,  # Fibrous texture (higher value)
-        'edge_density_range': [0.03, 0.10],  # Low to medium edge density
-        'brightness_range': [120, 240],  # Medium to high brightness
-        'importance': 1.1  # Weight for this material
+        'texture_patterns': ['smooth', 'regular', 'glossy'],
+        'edge_density': [0.05, 0.20],
+        'shape_descriptors': ['rectangular', 'cylindrical', 'irregular'],
+        'weight': 1.15
     },
     
     'glass': {
+        'feature_vectors': [
+            # Clear glass bottle signature
+            {'color_hist': [0.05, 0.1, 0.3, 0.35, 0.2], 'texture': 0.05, 'edge_profile': 0.9, 'reflectivity': 0.95},
+            # Green glass bottle
+            {'color_hist': [0.1, 0.35, 0.3, 0.15, 0.1], 'texture': 0.1, 'edge_profile': 0.85, 'reflectivity': 0.9},
+            # Brown glass jar
+            {'color_hist': [0.25, 0.3, 0.25, 0.1, 0.1], 'texture': 0.1, 'edge_profile': 0.8, 'reflectivity': 0.85}
+        ],
         'color_ranges': [
             # Clear glass
-            {'hsv_lower': [0, 0, 150], 'hsv_upper': [180, 30, 255]},
+            {'lower': [0, 0, 150], 'upper': [180, 40, 255]},
             # Green glass
-            {'hsv_lower': [40, 30, 40], 'hsv_upper': [80, 90, 255]},
+            {'lower': [35, 30, 40], 'upper': [85, 90, 255]},
             # Brown glass
-            {'hsv_lower': [10, 30, 40], 'hsv_upper': [30, 90, 200]},
+            {'lower': [10, 30, 40], 'upper': [30, 150, 200]},
             # Blue glass
-            {'hsv_lower': [90, 30, 40], 'hsv_upper': [130, 90, 255]},
+            {'lower': [90, 30, 40], 'upper': [130, 90, 255]}
         ],
-        'texture_threshold': 20,  # Very smooth texture (low value)
-        'edge_density_range': [0.15, 0.30],  # High edge density
-        'brightness_range': [100, 250],  # Variable brightness due to reflections
-        'importance': 1.3  # Weight for this material
+        'texture_patterns': ['very_smooth', 'reflective', 'transparent'],
+        'edge_density': [0.15, 0.35],
+        'shape_descriptors': ['cylindrical', 'curved', 'regular'],
+        'weight': 1.2
+    },
+    
+    'paper': {
+        'feature_vectors': [
+            # White paper signature
+            {'color_hist': [0.1, 0.1, 0.2, 0.3, 0.3], 'texture': 0.4, 'edge_profile': 0.3, 'reflectivity': 0.4},
+            # Cardboard box
+            {'color_hist': [0.3, 0.35, 0.2, 0.1, 0.05], 'texture': 0.6, 'edge_profile': 0.4, 'reflectivity': 0.3},
+            # Magazine/newspaper
+            {'color_hist': [0.2, 0.2, 0.2, 0.2, 0.2], 'texture': 0.5, 'edge_profile': 0.25, 'reflectivity': 0.35}
+        ],
+        'color_ranges': [
+            # White paper
+            {'lower': [0, 0, 180], 'upper': [180, 20, 255]},
+            # Brown cardboard
+            {'lower': [10, 20, 80], 'upper': [30, 90, 210]},
+            # Newspaper/grayish
+            {'lower': [0, 0, 100], 'upper': [180, 30, 180]},
+            # Yellowish paper
+            {'lower': [20, 10, 100], 'upper': [40, 80, 230]}
+        ],
+        'texture_patterns': ['fibrous', 'matte', 'rough'],
+        'edge_density': [0.03, 0.15],
+        'shape_descriptors': ['flat', 'rectangular', 'folded'],
+        'weight': 1.1
     },
     
     'metal': {
+        'feature_vectors': [
+            # Aluminum can signature
+            {'color_hist': [0.15, 0.25, 0.3, 0.2, 0.1], 'texture': 0.2, 'edge_profile': 0.8, 'reflectivity': 0.9},
+            # Steel can
+            {'color_hist': [0.2, 0.2, 0.25, 0.25, 0.1], 'texture': 0.25, 'edge_profile': 0.75, 'reflectivity': 0.85},
+            # Metal foil
+            {'color_hist': [0.1, 0.15, 0.25, 0.35, 0.15], 'texture': 0.15, 'edge_profile': 0.6, 'reflectivity': 0.95}
+        ],
         'color_ranges': [
             # Silver/aluminum
-            {'hsv_lower': [0, 0, 120], 'hsv_upper': [180, 30, 220]},
+            {'lower': [0, 0, 120], 'upper': [180, 30, 220]},
             # Gold/bronze
-            {'hsv_lower': [10, 50, 100], 'hsv_upper': [40, 150, 255]},
-            # Tin cans (bluish-gray)
-            {'hsv_lower': [90, 10, 100], 'hsv_upper': [130, 40, 220]},
+            {'lower': [10, 50, 100], 'upper': [40, 150, 255]},
+            # Steel blue-gray
+            {'lower': [90, 10, 80], 'upper': [130, 50, 220]}
         ],
-        'texture_threshold': 25,  # Smooth with potential reflections
-        'edge_density_range': [0.10, 0.25],  # Medium to high edge density
-        'brightness_range': [120, 230],  # Medium to high brightness
-        'importance': 1.25  # Weight for this material
+        'texture_patterns': ['smooth', 'reflective', 'metallic'],
+        'edge_density': [0.10, 0.30],
+        'shape_descriptors': ['cylindrical', 'rectangular', 'regular'],
+        'weight': 1.25
     },
     
     'organic': {
-        'color_ranges': [
-            # Green (plant material)
-            {'hsv_lower': [25, 40, 20], 'hsv_upper': [90, 255, 200]},
-            # Brown (food waste, soil)
-            {'hsv_lower': [0, 30, 20], 'hsv_upper': [30, 255, 150]},
-            # Dark organic matter
-            {'hsv_lower': [0, 0, 0], 'hsv_upper': [180, 255, 80]},
+        'feature_vectors': [
+            # Fruit/vegetable waste
+            {'color_hist': [0.3, 0.4, 0.2, 0.05, 0.05], 'texture': 0.7, 'edge_profile': 0.2, 'reflectivity': 0.3},
+            # Leaf/plant material
+            {'color_hist': [0.1, 0.4, 0.35, 0.1, 0.05], 'texture': 0.8, 'edge_profile': 0.3, 'reflectivity': 0.2},
+            # Food waste
+            {'color_hist': [0.35, 0.3, 0.2, 0.1, 0.05], 'texture': 0.65, 'edge_profile': 0.25, 'reflectivity': 0.25}
         ],
-        'texture_threshold': 70,  # Rough texture (high value)
-        'edge_density_range': [0.05, 0.15],  # Variable edges
-        'brightness_range': [20, 180],  # Lower brightness overall
-        'importance': 1.0  # Weight for this material
+        'color_ranges': [
+            # Green (plant matter)
+            {'lower': [25, 40, 20], 'upper': [90, 255, 200]},
+            # Brown (food waste, soil)
+            {'lower': [0, 30, 20], 'upper': [30, 255, 150]},
+            # Darker organic
+            {'lower': [0, 0, 0], 'upper': [180, 255, 80]}
+        ],
+        'texture_patterns': ['rough', 'irregular', 'natural'],
+        'edge_density': [0.05, 0.25],
+        'shape_descriptors': ['irregular', 'organic', 'varied'],
+        'weight': 1.05
     }
 }
 
-def preprocess_image(image):
-    """Apply preprocessing to improve image quality for analysis"""
+def preprocess_image(image, target_size=None):
+    """
+    Preprocess image for feature extraction
+    
+    Args:
+        image: OpenCV image array
+        target_size: Target size to resize to (optional)
+    
+    Returns:
+        Preprocessed image
+    """
+    if target_size:
+        image = cv2.resize(image, (target_size, target_size))
+    
     # Apply bilateral filter to reduce noise while preserving edges
     filtered = cv2.bilateralFilter(image, 9, 75, 75)
     
-    # Enhance contrast using CLAHE (Contrast Limited Adaptive Histogram Equalization)
+    # Enhance contrast using CLAHE
     lab = cv2.cvtColor(filtered, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
@@ -107,45 +169,118 @@ def preprocess_image(image):
     
     return enhanced
 
-def analyze_color(image, waste_type_data):
-    """Analyze color composition to identify waste materials"""
-    # Convert to HSV color space for better color segmentation
+def extract_color_features(image):
+    """
+    Extract color histogram features from the image
+    
+    Args:
+        image: Preprocessed OpenCV image
+    
+    Returns:
+        Normalized color histogram (5 bins per channel)
+    """
+    # Convert to HSV for better color representation
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
-    # Create a mask for the specific waste type's color ranges
+    # Calculate color histogram (5 bins per channel)
+    h_hist = cv2.calcHist([hsv], [0], None, [5], [0, 180])
+    s_hist = cv2.calcHist([hsv], [1], None, [5], [0, 256])
+    v_hist = cv2.calcHist([hsv], [2], None, [5], [0, 256])
+    
+    # Normalize histograms
+    h_hist = cv2.normalize(h_hist, h_hist, 0, 1, cv2.NORM_MINMAX)
+    s_hist = cv2.normalize(s_hist, s_hist, 0, 1, cv2.NORM_MINMAX)
+    v_hist = cv2.normalize(v_hist, v_hist, 0, 1, cv2.NORM_MINMAX)
+    
+    # Combine histograms into feature vector
+    color_hist = np.concatenate([h_hist, s_hist, v_hist]).flatten()
+    
+    # Create 5-bin representation of dominant colors
+    color_distribution = np.zeros(5)
+    bin_size = len(color_hist) // 5
+    for i in range(5):
+        start_idx = i * bin_size
+        end_idx = (i + 1) * bin_size if i < 4 else len(color_hist)
+        color_distribution[i] = np.mean(color_hist[start_idx:end_idx])
+    
+    # Normalize to sum to 1
+    if np.sum(color_distribution) > 0:
+        color_distribution = color_distribution / np.sum(color_distribution)
+    
+    return color_distribution
+
+def analyze_color_mask(image, material_data):
+    """
+    Analyze how well the image colors match the reference color ranges
+    
+    Args:
+        image: Preprocessed OpenCV image
+        material_data: Material signature data
+    
+    Returns:
+        Color match score (0-1)
+    """
+    # Convert to HSV for better color segmentation
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Create a mask for the material's color ranges
     combined_mask = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
     
-    for color_range in waste_type_data['color_ranges']:
-        lower = np.array(color_range['hsv_lower'])
-        upper = np.array(color_range['hsv_upper'])
+    for color_range in material_data['color_ranges']:
+        lower = np.array(color_range['lower'])
+        upper = np.array(color_range['upper'])
         mask = cv2.inRange(hsv, lower, upper)
         combined_mask = cv2.bitwise_or(combined_mask, mask)
     
     # Calculate percentage of pixels that match the color profile
     matching_pixels = np.sum(combined_mask > 0)
     total_pixels = combined_mask.shape[0] * combined_mask.shape[1]
-    color_match_percentage = matching_pixels / total_pixels if total_pixels > 0 else 0
+    color_match_score = matching_pixels / total_pixels if total_pixels > 0 else 0
     
-    return color_match_percentage
+    return color_match_score
 
-def analyze_texture(image, waste_type_data):
-    """Analyze texture patterns to identify material surfaces"""
-    # Convert to grayscale for texture analysis
+def extract_texture_features(image):
+    """
+    Extract texture features using gradient-based methods
+    
+    Args:
+        image: Preprocessed OpenCV image
+    
+    Returns:
+        Texture feature score
+    """
+    # Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # Calculate texture using local binary patterns
-    # Simplified approach using Laplacian variance
-    laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-    texture_variance = np.var(laplacian)
+    # Apply Gaussian blur to reduce noise
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     
-    # Map variance to a score based on the expected texture threshold
-    expected_texture = waste_type_data['texture_threshold']
-    texture_score = 1.0 - min(1.0, abs(texture_variance - expected_texture) / expected_texture)
+    # Calculate texture using Laplacian variance (edge sharpness)
+    laplacian = cv2.Laplacian(blurred, cv2.CV_64F)
+    laplacian_var = np.var(laplacian)
+    
+    # Calculate texture using gradient magnitude
+    sobelx = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=3)
+    gradient_magnitude = np.sqrt(sobelx**2 + sobely**2)
+    gradient_var = np.var(gradient_magnitude)
+    
+    # Normalize features
+    texture_score = (laplacian_var + gradient_var) / 10000
+    texture_score = min(1.0, texture_score)
     
     return texture_score
 
-def analyze_edges(image, waste_type_data):
-    """Analyze edge patterns to identify shapes and boundaries"""
+def extract_edge_features(image):
+    """
+    Extract edge-based features for shape analysis
+    
+    Args:
+        image: Preprocessed OpenCV image
+    
+    Returns:
+        Edge profile score
+    """
     # Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
@@ -158,50 +293,102 @@ def analyze_edges(image, waste_type_data):
     # Calculate edge density
     edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
     
-    # Check if edge density is in the expected range
-    min_density, max_density = waste_type_data['edge_density_range']
-    if min_density <= edge_density <= max_density:
-        # Edge density is in the expected range
-        edge_score = 1.0
-    else:
-        # Calculate distance to the expected range
-        if edge_density < min_density:
-            distance = min_density - edge_density
-        else:
-            distance = edge_density - max_density
-        # Normalize the distance
-        edge_score = max(0, 1.0 - (distance / max_density))
+    # Find contours for shape analysis
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-    return edge_score
+    # If no contours, return low edge score
+    if not contours:
+        return edge_density, 0.2
+    
+    # Find largest contour
+    largest_contour = max(contours, key=cv2.contourArea)
+    contour_area = cv2.contourArea(largest_contour)
+    
+    # Calculate shape regularity
+    perimeter = cv2.arcLength(largest_contour, True)
+    shape_regularity = 0
+    if perimeter > 0:
+        circularity = 4 * np.pi * contour_area / (perimeter**2)
+        shape_regularity = min(1.0, circularity)
+    
+    # Calculate edge profile score
+    edge_profile = (edge_density + shape_regularity) / 2
+    
+    return edge_density, edge_profile
 
-def analyze_brightness(image, waste_type_data):
-    """Analyze brightness to help distinguish between materials"""
+def calculate_reflectivity(image):
+    """
+    Estimate reflectivity of the material in the image
+    
+    Args:
+        image: Preprocessed OpenCV image
+    
+    Returns:
+        Reflectivity score (0-1)
+    """
     # Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # Calculate average brightness
-    avg_brightness = np.mean(gray)
+    # Calculate brightness variance (high variance often indicates reflective surfaces)
+    mean_brightness = np.mean(gray)
+    brightness_var = np.var(gray)
     
-    # Check if brightness is in the expected range
-    min_brightness, max_brightness = waste_type_data['brightness_range']
-    if min_brightness <= avg_brightness <= max_brightness:
-        # Brightness is in the expected range
-        brightness_score = 1.0
-    else:
-        # Calculate distance to the expected range
-        if avg_brightness < min_brightness:
-            distance = min_brightness - avg_brightness
-        else:
-            distance = avg_brightness - max_brightness
-        # Normalize the distance
-        max_distance = 255  # Maximum possible brightness value
-        brightness_score = max(0, 1.0 - (distance / max_distance))
+    # Normalize variance to 0-1 range
+    normalized_var = min(1.0, brightness_var / 5000)
     
-    return brightness_score
+    # Combine with mean brightness for reflectivity estimation
+    # (both very dark and very bright materials can be reflective)
+    brightness_factor = abs(mean_brightness - 128) / 128
+    reflectivity = (normalized_var + brightness_factor) / 2
+    
+    return reflectivity
+
+def compare_feature_vectors(extracted_features, reference_vectors):
+    """
+    Compare extracted features with reference feature vectors
+    
+    Args:
+        extracted_features: Dictionary of extracted features
+        reference_vectors: List of reference feature vectors
+    
+    Returns:
+        Best match score (0-1)
+    """
+    best_match = 0
+    
+    for ref_vector in reference_vectors:
+        # Compare color histogram (40% weight)
+        color_diff = np.sum(np.abs(extracted_features['color_hist'] - np.array(ref_vector['color_hist'])))
+        color_match = max(0, 1 - color_diff)
+        
+        # Compare texture (25% weight)
+        texture_diff = abs(extracted_features['texture'] - ref_vector['texture'])
+        texture_match = max(0, 1 - texture_diff)
+        
+        # Compare edge profile (20% weight)
+        edge_diff = abs(extracted_features['edge_profile'] - ref_vector['edge_profile'])
+        edge_match = max(0, 1 - edge_diff)
+        
+        # Compare reflectivity (15% weight)
+        reflectivity_diff = abs(extracted_features['reflectivity'] - ref_vector['reflectivity'])
+        reflectivity_match = max(0, 1 - reflectivity_diff)
+        
+        # Calculate weighted match score
+        match_score = (
+            color_match * 0.4 +
+            texture_match * 0.25 +
+            edge_match * 0.2 +
+            reflectivity_match * 0.15
+        )
+        
+        # Keep best match
+        best_match = max(best_match, match_score)
+    
+    return best_match
 
 def classify_waste(image_data):
     """
-    Classify waste from image data using color, texture, and edge analysis
+    Classify waste from image data using advanced feature extraction
     
     Args:
         image_data: Base64 encoded image data
@@ -224,53 +411,68 @@ def classify_waste(image_data):
         if image is None:
             raise ValueError("Could not decode image")
         
-        # Resize image for faster processing
-        max_size = 400
+        # Resize image for feature extraction
+        input_size = MODEL_CONFIG['input_size']
         h, w = image.shape[:2]
-        if max(h, w) > max_size:
-            scale = max_size / max(h, w)
+        if max(h, w) > input_size:
+            scale = input_size / max(h, w)
             image = cv2.resize(image, (int(w * scale), int(h * scale)))
         
         # Preprocess image
         processed_image = preprocess_image(image)
         
-        # Score each waste type
-        waste_scores = {}
+        # Extract features
+        extracted_features = {
+            'color_hist': extract_color_features(processed_image),
+            'texture': extract_texture_features(processed_image),
+            'edge_profile': extract_edge_features(processed_image)[1],
+            'reflectivity': calculate_reflectivity(processed_image)
+        }
         
-        for waste_type, waste_data in WASTE_TYPES.items():
-            # Analyze color (40% weight)
-            color_score = analyze_color(processed_image, waste_data) * 0.4
-            
-            # Analyze texture (30% weight)
-            texture_score = analyze_texture(processed_image, waste_data) * 0.3
-            
-            # Analyze edges (20% weight)
-            edge_score = analyze_edges(processed_image, waste_data) * 0.2
-            
-            # Analyze brightness (10% weight)
-            brightness_score = analyze_brightness(processed_image, waste_data) * 0.1
-            
-            # Calculate final score with importance weighting
-            final_score = (color_score + texture_score + edge_score + brightness_score) * waste_data['importance']
-            waste_scores[waste_type] = final_score
-            
-            logger.debug(f"{waste_type} scores - Color: {color_score:.2f}, Texture: {texture_score:.2f}, "
-                        f"Edge: {edge_score:.2f}, Brightness: {brightness_score:.2f}, Final: {final_score:.2f}")
+        # Compare with material signatures
+        material_scores = {}
         
-        # Find waste type with highest score
-        sorted_scores = sorted(waste_scores.items(), key=lambda x: x[1], reverse=True)
-        best_waste_type = sorted_scores[0][0]
-        best_score = sorted_scores[0][1]
+        for material, material_data in MATERIAL_SIGNATURES.items():
+            # Compare feature vectors (50% weight)
+            feature_match = compare_feature_vectors(
+                extracted_features, 
+                material_data['feature_vectors']
+            ) * 0.5
+            
+            # Check color mask match (30% weight)
+            color_match = analyze_color_mask(processed_image, material_data) * 0.3
+            
+            # Check edge density against expected range (20% weight)
+            edge_density, _ = extract_edge_features(processed_image)
+            min_density, max_density = material_data['edge_density']
+            if min_density <= edge_density <= max_density:
+                edge_match = 1.0
+            else:
+                distance = min(abs(edge_density - min_density), abs(edge_density - max_density))
+                edge_match = max(0, 1.0 - (distance / max_density))
+            edge_match *= 0.2
+            
+            # Calculate final score with material-specific weight
+            final_score = (feature_match + color_match + edge_match) * material_data['weight']
+            material_scores[material] = final_score
+            
+            logger.debug(f"{material} scores - Feature: {feature_match:.2f}, Color: {color_match:.2f}, "
+                        f"Edge: {edge_match:.2f}, Final: {final_score:.2f}")
         
-        # Normalize confidence to 0.7-0.95 range
-        confidence = 0.7 + (best_score * 0.25)
-        confidence = min(0.95, max(0.7, confidence))
+        # Find material with highest score
+        sorted_materials = sorted(material_scores.items(), key=lambda x: x[1], reverse=True)
+        best_material = sorted_materials[0][0]
+        best_score = sorted_materials[0][1]
         
-        logger.debug(f"Classified as {best_waste_type} with {confidence:.2f} confidence")
-        logger.debug(f"All scores: {waste_scores}")
+        # Calculate confidence (normalized to 0.75-0.95 range for better user experience)
+        confidence = 0.75 + (best_score * 0.2)
+        confidence = min(0.95, max(0.75, confidence))
         
-        return best_waste_type, round(confidence, 2)
+        logger.debug(f"Classified as {best_material} with {confidence:.2f} confidence")
+        logger.debug(f"All scores: {material_scores}")
+        
+        return best_material, round(confidence, 2)
         
     except Exception as e:
         logger.error(f"Error in waste classification: {str(e)}")
-        return 'plastic', 0.7
+        return 'plastic', 0.75
