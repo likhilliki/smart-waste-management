@@ -205,15 +205,29 @@ def recycler_dashboard():
     
     # Get recycler stats
     collected_items = WasteItem.query.filter_by(recycler_id=current_user.id).all()
-    recent_collections = WasteItem.query.filter_by(recycler_id=current_user.id).order_by(WasteItem.collected_at.desc()).limit(5).all()
+    recent_collections_query = WasteItem.query.filter_by(recycler_id=current_user.id).order_by(WasteItem.collected_at.desc()).limit(5).all()
     
+    # Create serializable data for charts
     waste_types = {}
     for item in collected_items:
         waste_types[item.waste_type] = waste_types.get(item.waste_type, 0) + 1
     
+    # Create serializable format for recent collections
+    recent_collections_data = []
+    for item in recent_collections_query:
+        # Format date for chart
+        date_str = item.collected_at.strftime('%Y-%m-%d') if item.collected_at else 'pending'
+        recent_collections_data.append({
+            'id': item.id,
+            'waste_type': item.waste_type,
+            'date': date_str,
+            'status': item.status
+        })
+    
     return render_template('recycler/dashboard.html', 
                           collected_items=collected_items,
-                          recent_collections=recent_collections,
+                          recent_collections=recent_collections_query,
+                          recent_collections_data=recent_collections_data,
                           waste_types=waste_types)
 
 @app.route('/recycler/scan')
