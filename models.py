@@ -16,7 +16,8 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    waste_items = db.relationship('WasteItem', backref='user', lazy=True)
+    waste_items = db.relationship('WasteItem', foreign_keys='WasteItem.user_id', backref='user', lazy=True)
+    collected_items = db.relationship('WasteItem', foreign_keys='WasteItem.recycler_id', backref='recycler', lazy=True)
     recycling_credits = db.relationship('RecyclingCredit', backref='user', lazy=True)
     
     def set_password(self, password):
